@@ -62,24 +62,25 @@ contract DEX {
     /// ---------------------------------------------------------------------
 
     /// @notice Deposit `amount` of `token` into the DEX.
-    /// @dev Intended flow: transferFrom user to DEX and update balances.
+    /// @dev Security assumptions: caller approved this contract to spend `amount` tokens.
+    ///      This updates the internal balance after a successful transfer.
     function deposit(address token, uint256 amount) external {
-        // Implementation to be added in a subsequent step.
-        // Suggested logic:
-        // - IERC20(token).transferFrom(msg.sender, address(this), amount)
-        // - balances[token][msg.sender] += amount
-        // - emit Deposit(msg.sender, token, amount)
+        require(amount > 0, "Amount must be > 0");
+        IERC20(token).transferFrom(msg.sender, address(this), amount);
+        balances[token][msg.sender] += amount;
+        emit Deposit(msg.sender, token, amount);
     }
 
     /// @notice Withdraw `amount` of `token` from the DEX back to the user.
-    /// @dev Intended flow: decrease internal balance then transfer to user.
+    /// @dev Security assumptions: token follows ERC-20 and does not reenter.
+    ///      We optimistically update balance before transfer; standard ERC-20
+    ///      implementations should not allow reentrancy through `transfer`.
     function withdraw(address token, uint256 amount) external {
-        // Implementation to be added in a subsequent step.
-        // Suggested logic:
-        // - require(balances[token][msg.sender] >= amount, "insufficient balance")
-        // - balances[token][msg.sender] -= amount
-        // - IERC20(token).transfer(msg.sender, amount)
-        // - emit Withdraw(msg.sender, token, amount)
+        require(amount > 0, "Amount must be > 0");
+        require(balances[token][msg.sender] >= amount, "Insufficient balance");
+        balances[token][msg.sender] -= amount;
+        IERC20(token).transfer(msg.sender, amount);
+        emit Withdraw(msg.sender, token, amount);
     }
 
     /// @notice Create a buy order for `amount` of `token` at `price`.
