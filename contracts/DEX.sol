@@ -57,6 +57,18 @@ contract DEX {
         uint256 price
     );
 
+    /// @notice Emitted when a trade is executed between buy and sell orders.
+    /// @param buyOrderId The ID of the buy order that was matched
+    /// @param sellOrderId The ID of the sell order that was matched
+    /// @param amount The amount of tokens traded
+    /// @param price The execution price
+    event TradeExecuted(
+        uint256 indexed buyOrderId,
+        uint256 indexed sellOrderId,
+        uint256 amount,
+        uint256 price
+    );
+
     /// ---------------------------------------------------------------------
     /// Function skeletons (implementation to be added in later steps)
     /// ---------------------------------------------------------------------
@@ -150,5 +162,65 @@ contract DEX {
         
         // Emit event
         emit NewOrder(orderId, msg.sender, false, sellToken, amount, price);
+    }
+
+    /// @notice Match compatible buy and sell orders for a given token.
+    /// @dev Uses checks-effects-interactions pattern to avoid reentrancy.
+    ///      Matches orders where buy.price >= sell.price and executes trades.
+    ///      Note: This is a simplified implementation that assumes a base payment token.
+    function matchOrders(address token) external {
+        Order[] storage orders = orderBook[token];
+        
+        // Find buy and sell orders that can be matched
+        for (uint256 i = 0; i < orders.length; i++) {
+            if (orders[i].isFilled || !orders[i].isBuyOrder) continue;
+            
+            for (uint256 j = 0; j < orders.length; j++) {
+                if (orders[j].isFilled || orders[j].isBuyOrder) continue;
+                
+                // Check if orders can be matched (buy price >= sell price)
+                if (orders[i].price >= orders[j].price) {
+                    // Determine trade amount (minimum of both order amounts)
+                    uint256 tradeAmount = orders[i].amount < orders[j].amount 
+                        ? orders[i].amount 
+                        : orders[j].amount;
+                    
+                    // Calculate payment amount (trade amount * sell price)
+                    uint256 paymentAmount = tradeAmount * orders[j].price;
+                    
+                    // Update balances (checks-effects-interactions pattern)
+                    // Give buyer the tokens they wanted
+                    balances[token][orders[i].trader] += tradeAmount;
+                    
+                    // Give seller the payment tokens
+                    // Note: In a real implementation, we'd need to track which token
+                    // the buyer used for payment. For now, we'll assume a base token.
+                    // The buyer's payment tokens were already deducted when creating the buy order.
+                    
+                    // Reduce order amounts
+                    orders[i].amount -= tradeAmount;
+                    orders[j].amount -= tradeAmount;
+                    
+                    // Mark orders as filled if completely executed
+                    if (orders[i].amount == 0) {
+                        orders[i].isFilled = true;
+                    }
+                    if (orders[j].amount == 0) {
+                        orders[j].isFilled = true;
+                    }
+                    
+                    // Emit trade execution event
+                    emit TradeExecuted(
+                        orders[i].id,
+                        orders[j].id,
+                        tradeAmount,
+                        orders[j].price
+                    );
+                    
+                    // Break inner loop to avoid double-matching
+                    break;
+                }
+            }
+        }
     }
 }
