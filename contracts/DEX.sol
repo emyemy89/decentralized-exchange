@@ -83,23 +83,72 @@ contract DEX {
         emit Withdraw(msg.sender, token, amount);
     }
 
-    /// @notice Create a buy order for `amount` of `token` at `price`.
-    function createBuyOrder(address token, uint256 amount, uint256 price) external {
-        // Implementation to be added in a subsequent step.
-        // Suggested logic:
-        // - Validate inputs
-        // - Assign id = nextOrderId++
-        // - orderBook[token].push(Order({ ... }))
-        // - emit NewOrder(id, msg.sender, true, token, amount, price)
+    /// @notice Create a buy order for `amount` of `buyToken` using `sellToken` as payment.
+    /// @dev User must have sufficient `sellToken` balance deposited in the DEX.
+    ///      The order is recorded in the order book for potential matching.
+    function createBuyOrder(address buyToken, address sellToken, uint256 amount, uint256 price) external {
+        // Validate inputs
+        require(amount > 0, "Amount must be > 0");
+        require(price > 0, "Price must be > 0");
+        
+        // Calculate required sell token amount (amount * price)
+        uint256 requiredSellAmount = amount * price;
+        
+        // Check user has enough deposited balance of the sell token
+        require(balances[sellToken][msg.sender] >= requiredSellAmount, "Insufficient sell token balance");
+        
+        // Deduct the sell token amount from user balance (reserve for the order)
+        balances[sellToken][msg.sender] -= requiredSellAmount;
+        
+        // Create new buy order
+        uint256 orderId = nextOrderId++;
+        Order memory newOrder = Order({
+            id: orderId,
+            trader: msg.sender,
+            isBuyOrder: true,
+            token: buyToken,
+            amount: amount,
+            price: price,
+            isFilled: false
+        });
+        
+        // Add order to the order book for the buy token
+        orderBook[buyToken].push(newOrder);
+        
+        // Emit event
+        emit NewOrder(orderId, msg.sender, true, buyToken, amount, price);
     }
 
-    /// @notice Create a sell order for `amount` of `token` at `price`.
-    function createSellOrder(address token, uint256 amount, uint256 price) external {
-        // Implementation to be added in a subsequent step.
-        // Suggested logic:
-        // - Validate inputs
-        // - Assign id = nextOrderId++
-        // - orderBook[token].push(Order({ ... }))
-        // - emit NewOrder(id, msg.sender, false, token, amount, price)
+    /// @notice Create a sell order for `amount` of `sellToken` to receive `buyToken`.
+    /// @dev User must have sufficient `sellToken` balance deposited in the DEX.
+    ///      The order is recorded in the order book for potential matching.
+    function createSellOrder(address sellToken, address buyToken, uint256 amount, uint256 price) external {
+        // Validate inputs
+        require(amount > 0, "Amount must be > 0");
+        require(price > 0, "Price must be > 0");
+        
+        // Check user has enough deposited balance of the sell token
+        require(balances[sellToken][msg.sender] >= amount, "Insufficient sell token balance");
+        
+        // Deduct the sell token amount from user balance (reserve for the order)
+        balances[sellToken][msg.sender] -= amount;
+        
+        // Create new sell order
+        uint256 orderId = nextOrderId++;
+        Order memory newOrder = Order({
+            id: orderId,
+            trader: msg.sender,
+            isBuyOrder: false,
+            token: sellToken,
+            amount: amount,
+            price: price,
+            isFilled: false
+        });
+        
+        // Add order to the order book for the sell token
+        orderBook[sellToken].push(newOrder);
+        
+        // Emit event
+        emit NewOrder(orderId, msg.sender, false, sellToken, amount, price);
     }
 }
