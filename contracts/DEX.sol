@@ -14,9 +14,10 @@ contract DEX {
         uint256 id;
         address trader;
         bool isBuyOrder;
-        address token;
-        uint256 amount;
-        uint256 price;
+        address buyToken;
+        address sellToken;
+        uint256 amount; // for buy: desired buyToken amount; for sell: offered sellToken amount
+        uint256 price;  // sellToken per 1 buyToken
         bool isFilled;
     }
 
@@ -45,14 +46,16 @@ contract DEX {
     /// @param id The unique order ID
     /// @param trader The account placing the order
     /// @param isBuyOrder True for buy order; false for sell order
-    /// @param token The ERC-20 token being traded
+    /// @param buyToken The token being bought
+    /// @param sellToken The token being sold
     /// @param amount The order size (in token units)
-    /// @param price The limit price (quote per token unit)
+    /// @param price The limit price (sellToken per 1 buyToken)
     event NewOrder(
         uint256 indexed id,
         address indexed trader,
         bool isBuyOrder,
-        address indexed token,
+        address indexed buyToken,
+        address sellToken,
         uint256 amount,
         uint256 price
     );
@@ -103,8 +106,9 @@ contract DEX {
         require(amount > 0, "Amount must be > 0");
         require(price > 0, "Price must be > 0");
         
-        // Calculate required sell token amount (amount * price)
-        uint256 requiredSellAmount = amount * price;
+        // Calculate required sell token amount (amount * price / 1e18)
+        // Price is in sellToken per buyToken (in wei), so we divide by 1e18
+        uint256 requiredSellAmount = (amount * price) / 1e18;
         
         // Check user has enough deposited balance of the sell token
         require(balances[sellToken][msg.sender] >= requiredSellAmount, "Insufficient sell token balance");
@@ -118,7 +122,8 @@ contract DEX {
             id: orderId,
             trader: msg.sender,
             isBuyOrder: true,
-            token: buyToken,
+            buyToken: buyToken,
+            sellToken: sellToken,
             amount: amount,
             price: price,
             isFilled: false
@@ -128,7 +133,7 @@ contract DEX {
         orderBook[buyToken].push(newOrder);
         
         // Emit event
-        emit NewOrder(orderId, msg.sender, true, buyToken, amount, price);
+        emit NewOrder(orderId, msg.sender, true, buyToken, sellToken, amount, price);
     }
 
     /// @notice Create a sell order for `amount` of `sellToken` to receive `buyToken`.
@@ -151,7 +156,8 @@ contract DEX {
             id: orderId,
             trader: msg.sender,
             isBuyOrder: false,
-            token: sellToken,
+            buyToken: buyToken,
+            sellToken: sellToken,
             amount: amount,
             price: price,
             isFilled: false
@@ -161,13 +167,12 @@ contract DEX {
         orderBook[sellToken].push(newOrder);
         
         // Emit event
-        emit NewOrder(orderId, msg.sender, false, sellToken, amount, price);
+        emit NewOrder(orderId, msg.sender, false, buyToken, sellToken, amount, price);
     }
 
     /// @notice Match compatible buy and sell orders for a given token.
     /// @dev Uses checks-effects-interactions pattern to avoid reentrancy.
     ///      Matches orders where buy.price >= sell.price and executes trades.
-    ///      Note: This is a simplified implementation that assumes a base payment token.
     function matchOrders(address token) external {
         Order[] storage orders = orderBook[token];
         
@@ -179,23 +184,25 @@ contract DEX {
                 if (orders[j].isFilled || orders[j].isBuyOrder) continue;
                 
                 // Check if orders can be matched (buy price >= sell price)
-                if (orders[i].price >= orders[j].price) {
+                // and both orders are for the same token pair
+                if (orders[i].price >= orders[j].price && 
+                    orders[i].buyToken == orders[j].buyToken && 
+                    orders[i].sellToken == orders[j].sellToken) {
+                    
                     // Determine trade amount (minimum of both order amounts)
                     uint256 tradeAmount = orders[i].amount < orders[j].amount 
                         ? orders[i].amount 
                         : orders[j].amount;
                     
-                    // Calculate payment amount (trade amount * sell price)
-                    uint256 paymentAmount = tradeAmount * orders[j].price;
+                    // Calculate payment amount (trade amount * sell price / 1e18)
+                    uint256 paymentAmount = (tradeAmount * orders[j].price) / 1e18;
                     
                     // Update balances (checks-effects-interactions pattern)
                     // Give buyer the tokens they wanted
-                    balances[token][orders[i].trader] += tradeAmount;
+                    balances[orders[i].buyToken][orders[i].trader] += tradeAmount;
                     
-                    // Give seller the payment tokens
-                    // Note: In a real implementation, we'd need to track which token
-                    // the buyer used for payment. For now, we'll assume a base token.
-                    // The buyer's payment tokens were already deducted when creating the buy order.
+                    // Give seller the payment tokens (from buyer's reserved balance)
+                    balances[orders[i].sellToken][orders[j].trader] += paymentAmount;
                     
                     // Reduce order amounts
                     orders[i].amount -= tradeAmount;
