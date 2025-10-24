@@ -1,77 +1,278 @@
-import { useCallback, useEffect, useState } from 'react'
-import { ethers } from 'ethers'
+import { useState, useEffect } from 'react'
+import { useDEX } from './hooks/useDEX'
 import './App.css'
 
 function App() {
-  const [walletAddress, setWalletAddress] = useState('')
-  const [isConnecting, setIsConnecting] = useState(false)
-  const [errorMessage, setErrorMessage] = useState('')
+  const {
+    isConnected,
+    account,
+    connectWallet,
+    getBalance,
+    getTokenBalance,
+    deposit,
+    createBuyOrder,
+    formatTokenAmount,
+    parseTokenAmount
+  } = useDEX();
 
-  const connectWallet = useCallback(async () => {
-    setErrorMessage('')
-    try {
-      if (!window.ethereum) {
-        setErrorMessage('MetaMask not detected. Please install it to continue.')
-        return
-      }
+  const [tokenAAddress, setTokenAAddress] = useState('');
+  const [tokenBAddress, setTokenBAddress] = useState('');
+  const [tokenABalance, setTokenABalance] = useState('0');
+  const [tokenBBalance, setTokenBBalance] = useState('0');
+  const [dexTokenABalance, setDexTokenABalance] = useState('0');
+  const [dexTokenBBalance, setDexTokenBBalance] = useState('0');
+  const [depositAmount, setDepositAmount] = useState('100');
+  const [orderAmount, setOrderAmount] = useState('10');
+  const [orderPrice, setOrderPrice] = useState('2');
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
-      setIsConnecting(true)
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const accounts = await provider.send('eth_requestAccounts', [])
-      if (!accounts || accounts.length === 0) {
-        setErrorMessage('No account authorized')
-        return
-      }
-      setWalletAddress(ethers.getAddress(accounts[0]))
-    } catch (err) {
-      setErrorMessage(err?.message ?? 'Failed to connect wallet')
-    } finally {
-      setIsConnecting(false)
-    }
-  }, [])
-
+  // Sample token addresses (you'll need to deploy these and update)
   useEffect(() => {
-    if (!window.ethereum) return
-    const handleAccountsChanged = (accounts) => {
-      if (accounts && accounts.length > 0) {
-        setWalletAddress(ethers.getAddress(accounts[0]))
-      } else {
-        setWalletAddress('')
-      }
+    // These are the actual deployed token addresses
+    setTokenAAddress('0x5FbDB2315678afecb367f032d93F642f64180aa3');
+    setTokenBAddress('0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512');
+  }, []);
+
+  // Load balances when connected
+  useEffect(() => {
+    if (isConnected && tokenAAddress && tokenBAddress) {
+      loadBalances();
     }
-    window.ethereum.on?.('accountsChanged', handleAccountsChanged)
-    return () => {
-      window.ethereum?.removeListener?.('accountsChanged', handleAccountsChanged)
+  }, [isConnected, tokenAAddress, tokenBAddress]);
+
+  const loadBalances = async () => {
+    try {
+      const tokenABal = await getTokenBalance(tokenAAddress);
+      const tokenBBal = await getTokenBalance(tokenBAddress);
+      const dexABal = await getBalance(tokenAAddress);
+      const dexBBal = await getBalance(tokenBAddress);
+
+      setTokenABalance(tokenABal);
+      setTokenBBalance(tokenBBal);
+      setDexTokenABalance(dexABal);
+      setDexTokenBBalance(dexBBal);
+    } catch (error) {
+      console.error('Error loading balances:', error);
     }
-  }, [])
+  };
+
+  const handleConnect = async () => {
+    try {
+      await connectWallet();
+      setMessage('Wallet connected successfully!');
+    } catch (error) {
+      setMessage(`Error: ${error.message}`);
+    }
+  };
+
+  const handleDeposit = async () => {
+    if (!tokenAAddress) {
+      setMessage('Please set Token A address');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const amount = parseTokenAmount(depositAmount);
+      const txHash = await deposit(tokenAAddress, amount);
+      setMessage(`Deposit successful! TX: ${txHash}`);
+      await loadBalances(); // Refresh balances
+    } catch (error) {
+      setMessage(`Deposit failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateOrder = async () => {
+    if (!tokenAAddress || !tokenBAddress) {
+      setMessage('Please set both token addresses');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const amount = parseTokenAmount(orderAmount);
+      const price = parseTokenAmount(orderPrice);
+      const txHash = await createBuyOrder(tokenAAddress, tokenBAddress, amount, price);
+      setMessage(`Order created successfully! TX: ${txHash}`);
+      await loadBalances(); // Refresh balances
+    } catch (error) {
+      setMessage(`Order creation failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: 24 }}>
-      <h1 style={{ marginBottom: 16 }}>Decentralized Exchange – MVP Setup</h1>
-      {walletAddress ? (
-        <div style={{
-          padding: 12,
-          border: '1px solid #e5e7eb',
-          borderRadius: 8,
-          background: '#f9fafb',
-          wordBreak: 'break-all'
-        }}>
-          Connected Wallet: {walletAddress}
+    <div style={{ maxWidth: 800, margin: '0 auto', padding: 24 }}>
+      <h1 style={{ marginBottom: 24 }}>Decentralized Exchange – MVP Setup</h1>
+      
+      {/* Connection Status */}
+      <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+        {isConnected ? (
+          <div>
+            <p style={{ color: 'green', margin: 0 }}>✅ Connected Wallet: {account}</p>
+          </div>
+        ) : (
+          <button 
+            onClick={handleConnect}
+            style={{
+              padding: '12px 24px',
+              borderRadius: 8,
+              border: '1px solid #111827',
+              background: '#111827',
+              color: 'white',
+              cursor: 'pointer',
+              fontSize: 16
+            }}
+          >
+            Connect Wallet
+          </button>
+        )}
+      </div>
+
+      {/* Token Configuration */}
+      <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+        <h3>Token Configuration</h3>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', marginBottom: 4 }}>Token A Address:</label>
+          <input
+            type="text"
+            value={tokenAAddress}
+            onChange={(e) => setTokenAAddress(e.target.value)}
+            style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
+            placeholder="0x..."
+          />
         </div>
-      ) : (
-        <button onClick={connectWallet} disabled={isConnecting} style={{
-          padding: '10px 16px',
-          borderRadius: 8,
-          border: '1px solid #111827',
-          background: '#111827',
-          color: 'white',
-          cursor: 'pointer'
-        }}>
-          {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', marginBottom: 4 }}>Token B Address:</label>
+          <input
+            type="text"
+            value={tokenBAddress}
+            onChange={(e) => setTokenBAddress(e.target.value)}
+            style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
+            placeholder="0x..."
+          />
+        </div>
+        <button 
+          onClick={loadBalances}
+          style={{
+            padding: '8px 16px',
+            borderRadius: 4,
+            border: '1px solid #111827',
+            background: '#111827',
+            color: 'white',
+            cursor: 'pointer'
+          }}
+        >
+          Refresh Balances
         </button>
+      </div>
+
+      {/* Balances */}
+      {isConnected && (
+        <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+          <h3>Balances</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div>
+              <h4>Token A</h4>
+              <p>Wallet: {formatTokenAmount(tokenABalance)}</p>
+              <p>DEX: {formatTokenAmount(dexTokenABalance)}</p>
+            </div>
+            <div>
+              <h4>Token B</h4>
+              <p>Wallet: {formatTokenAmount(tokenBBalance)}</p>
+              <p>DEX: {formatTokenAmount(dexTokenBBalance)}</p>
+            </div>
+          </div>
+        </div>
       )}
-      {errorMessage && (
-        <p style={{ color: 'crimson', marginTop: 12 }}>{errorMessage}</p>
+
+      {/* Actions */}
+      {isConnected && (
+        <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+          <h3>Actions</h3>
+          
+          {/* Deposit */}
+          <div style={{ marginBottom: 16 }}>
+            <h4>Deposit Token A</h4>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <input
+                type="number"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', flex: 1 }}
+                placeholder="Amount"
+              />
+              <button 
+                onClick={handleDeposit}
+                disabled={isLoading}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 4,
+                  border: '1px solid #111827',
+                  background: '#111827',
+                  color: 'white',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  opacity: isLoading ? 0.6 : 1
+                }}
+              >
+                {isLoading ? 'Depositing...' : 'Deposit'}
+              </button>
+            </div>
+          </div>
+
+          {/* Create Order */}
+          <div>
+            <h4>Create Buy Order (Token A for Token B)</h4>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <input
+                type="number"
+                value={orderAmount}
+                onChange={(e) => setOrderAmount(e.target.value)}
+                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
+                placeholder="Amount"
+              />
+              <input
+                type="number"
+                value={orderPrice}
+                onChange={(e) => setOrderPrice(e.target.value)}
+                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
+                placeholder="Price"
+              />
+              <button 
+                onClick={handleCreateOrder}
+                disabled={isLoading}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 4,
+                  border: '1px solid #111827',
+                  background: '#111827',
+                  color: 'white',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  opacity: isLoading ? 0.6 : 1
+                }}
+              >
+                {isLoading ? 'Creating...' : 'Create Order'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Messages */}
+      {message && (
+        <div style={{ 
+          padding: 12, 
+          borderRadius: 8, 
+          background: message.includes('Error') ? '#fee2e2' : '#d1fae5',
+          color: message.includes('Error') ? '#dc2626' : '#059669',
+          marginTop: 16
+        }}>
+          {message}
+        </div>
       )}
     </div>
   )
