@@ -1,57 +1,133 @@
-# Sample Hardhat 3 Beta Project (`mocha` and `ethers`)
+# Decentralized Exchange (DEX) - Frontend Integration
 
-This project showcases a Hardhat 3 Beta project using `mocha` for tests and the `ethers` library for Ethereum interactions.
+This project integrates a React frontend with Hardhat smart contracts for a decentralized exchange.
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+## Project Structure
 
-## Project Overview
+```
+decentralized-exchange/
+├── contracts/           # Solidity smart contracts
+│   ├── AssetToken.sol   # ERC-20 token contract
+│   └── DEX.sol          # Main DEX contract
+├── frontend/            # React + Vite frontend
+│   ├── src/
+│   │   ├── hooks/
+│   │   │   └── useDEX.js        # Custom hook for DEX interactions
+│   │   ├── utils/
+│   │   │   └── contractConfig.js # Contract addresses and ABIs
+│   │   └── App.jsx             # Main React component
+│   └── package.json
+├── scripts/
+│   └── deploy.js        # Deployment script
+└── hardhat.config.cjs   # Hardhat configuration
+```
 
-This example project includes:
+## Setup Instructions
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+### 1. Install Dependencies
+
+```bash
+# Install backend dependencies
+npm install
+
+# Install frontend dependencies
+cd frontend
+npm install
+cd ..
+```
+
+### 2. Deploy Contracts to Local Network
+
+```bash
+# Start local Hardhat network
+npx hardhat node
+
+# In another terminal, deploy contracts
+npx hardhat run scripts/deploy.js --network localhost
+```
+
+### 3. Update Frontend Configuration
+
+After deployment, update the contract addresses in the frontend:
+
+1. Copy the DEX contract address from the deployment output
+2. Update `frontend/src/utils/contractConfig.js`:
+   ```javascript
+   export const DEX_CONTRACT_ADDRESS = "YOUR_DEX_ADDRESS_HERE";
+   ```
+
+3. Update `frontend/src/App.jsx` with the token addresses:
+   ```javascript
+   setTokenAAddress('YOUR_TOKEN_A_ADDRESS');
+   setTokenBAddress('YOUR_TOKEN_B_ADDRESS');
+   ```
+
+### 4. Start the Frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+### 5. Connect MetaMask
+
+1. Open MetaMask
+2. Add the local Hardhat network:
+   - Network Name: `Hardhat Local`
+   - RPC URL: `http://localhost:8545`
+   - Chain ID: `31337`
+   - Currency Symbol: `ETH`
+
+3. Import the Hardhat test account:
+   - Private Key: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
+   - This account has 10,000 ETH for testing
+
+## Features
+
+### Frontend Features
+- ✅ MetaMask wallet connection
+- ✅ Display wallet and DEX balances
+- ✅ Deposit tokens into DEX
+- ✅ Create buy orders
+- ✅ Real-time balance updates
+- ✅ Transaction status messages
+
+### Smart Contract Features
+- ✅ ERC-20 token contracts (AssetToken)
+- ✅ DEX contract with order book
+- ✅ Deposit/withdraw functionality
+- ✅ Buy/sell order creation
+- ✅ Order matching and execution
+- ✅ Event emission for tracking
 
 ## Usage
 
-### Running Tests
+1. **Connect Wallet**: Click "Connect Wallet" to connect MetaMask
+2. **Configure Tokens**: Set the token addresses (pre-filled after deployment)
+3. **View Balances**: See your wallet and DEX balances for both tokens
+4. **Deposit Tokens**: Deposit Token A into the DEX for trading
+5. **Create Orders**: Create buy orders for Token A using Token B as payment
 
-To run all the tests in the project, execute the following command:
+## Testing
 
-```shell
-npx hardhat test
+Run the Solidity tests:
+```bash
+npx hardhat test --config hardhat.config.cjs
 ```
 
-You can also selectively run the Solidity or `mocha` tests:
+## Development Notes
 
-```shell
-npx hardhat test solidity
-npx hardhat test mocha
-```
+- The frontend connects to `localhost:8545` (Hardhat local network)
+- All amounts are handled in wei (1 ETH = 10^18 wei)
+- The DEX uses a simple order book model
+- Orders are matched when `buy.price >= sell.price`
+- The frontend automatically refreshes balances after transactions
 
-### Make a deployment to Sepolia
+## Next Steps
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
-
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
-
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
-
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
+- Add sell order creation
+- Implement order book display
+- Add order matching functionality
+- Improve UI/UX design
+- Add more comprehensive error handling
+- Implement order cancellation

@@ -1,6 +1,6 @@
-require("dotenv").config();
-require("@nomicfoundation/hardhat-ethers");
-require("@nomicfoundation/hardhat-toolbox-mocha-ethers");
+import "dotenv/config";
+import "@nomicfoundation/hardhat-ethers";
+import "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 
 const { SEPOLIA_URL, PRIVATE_KEY } = process.env;
 const networks = {};
@@ -13,7 +13,9 @@ if (SEPOLIA_URL) {
 }
 
 /** @type import('hardhat/config').HardhatUserConfig */
-module.exports = {
+export default {
   solidity: "0.8.20",
   networks,
 };
+
+
