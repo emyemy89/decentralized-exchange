@@ -17,11 +17,36 @@ export const useDEX = () => {
     }
   }, []);
 
-  // Connect to MetaMask
+  // Connect to MetaMask and ensure we're on Hardhat (31337)
   const connectWallet = useCallback(async () => {
     try {
       if (!window.ethereum) {
         throw new Error('MetaMask not detected');
+      }
+
+      const HARDHAT_PARAMS = {
+        chainId: '0x7A69', // 31337
+        chainName: 'Hardhat Local',
+        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+        rpcUrls: ['http://127.0.0.1:8545'],
+        blockExplorerUrls: []
+      };
+
+      // Try to switch to Hardhat; if not added, add it
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: HARDHAT_PARAMS.chainId }],
+        });
+      } catch (switchErr) {
+        if (switchErr?.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [HARDHAT_PARAMS],
+          });
+        } else {
+          throw switchErr;
+        }
       }
 
       const accounts = await window.ethereum.request({
@@ -29,7 +54,8 @@ export const useDEX = () => {
       });
 
       if (accounts.length > 0) {
-        const provider = new ethers.BrowserProvider(window.ethereum);
+        // "any" avoids network caching issues when chain changes
+        const provider = new ethers.BrowserProvider(window.ethereum, 'any');
         const signer = await provider.getSigner();
         const dexContract = new ethers.Contract(DEX_CONTRACT_ADDRESS, DEX_ABI, signer);
 
