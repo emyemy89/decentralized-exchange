@@ -11,6 +11,7 @@ function App() {
     getTokenBalance,
     deposit,
     createBuyOrder,
+    createSellOrder,
     formatTokenAmount,
     parseTokenAmount
   } = useDEX();
@@ -22,8 +23,11 @@ function App() {
   const [dexTokenABalance, setDexTokenABalance] = useState('0');
   const [dexTokenBBalance, setDexTokenBBalance] = useState('0');
   const [depositAmount, setDepositAmount] = useState('100');
+  const [depositAmountB, setDepositAmountB] = useState('100');
   const [orderAmount, setOrderAmount] = useState('10');
   const [orderPrice, setOrderPrice] = useState('2');
+  const [sellOrderAmount, setSellOrderAmount] = useState('10');
+  const [sellOrderPrice, setSellOrderPrice] = useState('2');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -85,6 +89,25 @@ function App() {
     }
   };
 
+  const handleDepositB = async () => {
+    if (!tokenBAddress) {
+      setMessage('Please set Token B address');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const amount = parseTokenAmount(depositAmountB);
+      const txHash = await deposit(tokenBAddress, amount);
+      setMessage(`Deposit (Token B) successful! TX: ${txHash}`);
+      await loadBalances();
+    } catch (error) {
+      setMessage(`Deposit (Token B) failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCreateOrder = async () => {
     if (!tokenAAddress || !tokenBAddress) {
       setMessage('Please set both token addresses');
@@ -100,6 +123,27 @@ function App() {
       await loadBalances(); // Refresh balances
     } catch (error) {
       setMessage(`Order creation failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateSellOrder = async () => {
+    if (!tokenAAddress || !tokenBAddress) {
+      setMessage('Please set both token addresses');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const amount = parseTokenAmount(sellOrderAmount);
+      const price = parseTokenAmount(sellOrderPrice);
+      // Selling A to get B
+      const txHash = await createSellOrder(tokenAAddress, tokenBAddress, amount, price);
+      setMessage(`Sell order created successfully! TX: ${txHash}`);
+      await loadBalances();
+    } catch (error) {
+      setMessage(`Sell order creation failed: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -195,7 +239,7 @@ function App() {
         <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
           <h3>Actions</h3>
           
-          {/* Deposit */}
+          {/* Deposit Token A */}
           <div style={{ marginBottom: 16 }}>
             <h4>Deposit Token A</h4>
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
@@ -219,14 +263,49 @@ function App() {
                   opacity: isLoading ? 0.6 : 1
                 }}
               >
-                {isLoading ? 'Depositing...' : 'Deposit'}
+                {isLoading ? 'Depositing...' : 'Deposit Token A'}
               </button>
             </div>
+            <p style={{ marginTop: -4, color: '#6b7280' }}>
+              Approves then deposits Token A into the DEX. Needed for sell orders.
+            </p>
           </div>
 
-          {/* Create Order */}
+          {/* Deposit Token B */}
+          <div style={{ marginBottom: 16 }}>
+            <h4>Deposit Token B</h4>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <input
+                type="number"
+                value={depositAmountB}
+                onChange={(e) => setDepositAmountB(e.target.value)}
+                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', flex: 1 }}
+                placeholder="Amount"
+              />
+              <button 
+                onClick={handleDepositB}
+                disabled={isLoading}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 4,
+                  border: '1px solid #111827',
+                  background: '#111827',
+                  color: 'white',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  opacity: isLoading ? 0.6 : 1
+                }}
+              >
+                {isLoading ? 'Depositing...' : 'Deposit Token B'}
+              </button>
+            </div>
+            <p style={{ marginTop: -4, color: '#6b7280' }}>
+              Approves then deposits Token B into the DEX. Needed for buy orders.
+            </p>
+          </div>
+
+          {/* Create Buy Order */}
           <div>
-            <h4>Create Buy Order (Token A for Token B)</h4>
+            <h4>Create Buy Order (Buy A, pay B)</h4>
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <input
                 type="number"
@@ -255,9 +334,51 @@ function App() {
                   opacity: isLoading ? 0.6 : 1
                 }}
               >
-                {isLoading ? 'Creating...' : 'Create Order'}
+                {isLoading ? 'Creating...' : 'Create Buy Order'}
               </button>
             </div>
+            <p style={{ marginTop: -4, color: '#6b7280' }}>
+              Requires Token B deposited. Required B = amountA × price (18 decimals). Price is quoted as Token B per 1 Token A (i.e., 1 A = price B).
+            </p>
+          </div>
+
+          {/* Create Sell Order */}
+          <div>
+            <h4>Create Sell Order (Sell A, receive B)</h4>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <input
+                type="number"
+                value={sellOrderAmount}
+                onChange={(e) => setSellOrderAmount(e.target.value)}
+                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
+                placeholder="Amount"
+              />
+              <input
+                type="number"
+                value={sellOrderPrice}
+                onChange={(e) => setSellOrderPrice(e.target.value)}
+                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
+                placeholder="Price"
+              />
+              <button 
+                onClick={handleCreateSellOrder}
+                disabled={isLoading}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 4,
+                  border: '1px solid #111827',
+                  background: '#111827',
+                  color: 'white',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  opacity: isLoading ? 0.6 : 1
+                }}
+              >
+                {isLoading ? 'Creating...' : 'Create Sell Order'}
+              </button>
+            </div>
+            <p style={{ marginTop: -4, color: '#6b7280' }}>
+              Requires Token A deposited. Required A = amountA (18 decimals). Price is Token B per 1 Token A (i.e., 1 A = price B).
+            </p>
           </div>
         </div>
       )}
