@@ -130,10 +130,14 @@ contract DEX {
         });
         
         // Add order to the order book for the buy token
+        // Both buy and sell orders for the same token are stored in the same orderBook
         orderBook[buyToken].push(newOrder);
         
         // Emit event
         emit NewOrder(orderId, msg.sender, true, buyToken, sellToken, amount, price);
+        
+        // Try to match orders immediately
+        matchOrders(buyToken);
     }
 
     /// @notice Create a sell order for `amount` of `sellToken` to receive `buyToken`.
@@ -163,17 +167,23 @@ contract DEX {
             isFilled: false
         });
         
-        // Add order to the order book for the sell token
+        // Add order to the order book for the sellToken (the token being sold)
+        // This ensures both buy and sell orders for the same token are in the same orderBook
+        // For a sell order: selling sellToken -> store in orderBook[sellToken]
+        // Buy orders for sellToken are also stored in orderBook[sellToken]
         orderBook[sellToken].push(newOrder);
         
         // Emit event
         emit NewOrder(orderId, msg.sender, false, buyToken, sellToken, amount, price);
+        
+        // Try to match orders immediately - match orders for the sellToken
+        matchOrders(sellToken);
     }
 
     /// @notice Match compatible buy and sell orders for a given token.
     /// @dev Uses checks-effects-interactions pattern to avoid reentrancy.
     ///      Matches orders where buy.price >= sell.price and executes trades.
-    function matchOrders(address token) external {
+    function matchOrders(address token) public {
         Order[] storage orders = orderBook[token];
         
         // Find buy and sell orders that can be matched
@@ -184,10 +194,12 @@ contract DEX {
                 if (orders[j].isFilled || orders[j].isBuyOrder) continue;
                 
                 // Check if orders can be matched (buy price >= sell price)
-                // and both orders are for the same token pair
+                // and both orders are for the same token pair (inverse relationship)
+                // Buy order: wants buyToken, pays sellToken
+                // Sell order: sells sellToken, wants buyToken
                 if (orders[i].price >= orders[j].price && 
-                    orders[i].buyToken == orders[j].buyToken && 
-                    orders[i].sellToken == orders[j].sellToken) {
+                    orders[i].buyToken == orders[j].sellToken && 
+                    orders[i].sellToken == orders[j].buyToken) {
                     
                     // Determine trade amount (minimum of both order amounts)
                     uint256 tradeAmount = orders[i].amount < orders[j].amount 

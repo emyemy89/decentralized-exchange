@@ -45,6 +45,28 @@ async function main() {
   await tokenA.transfer(await signer.getAddress(), ethers.parseEther("10000"));
   await tokenB.transfer(await signer.getAddress(), ethers.parseEther("10000"));
 
+
+    // Fund account 13 with Token A and approve DEX
+  const acct13 = await provider.getSigner(13);
+  await tokenA.transfer(await acct13.getAddress(), ethers.parseEther("1000")); // or: await tokenA.mint(...)
+
+  await tokenA.connect(acct13).approve(dexAddress, ethers.parseEther("500"));
+
+  // Optional sanity deposit, I think we should remove this line
+  await dex.connect(acct13).deposit(tokenAAddress, ethers.parseEther("10"));
+
+  // Option A: transfer from deployer (deployer owns initialSupply)
+  await tokenB.transfer(await acct13.getAddress(), ethers.parseEther("1000"));
+
+  // Option B: mint directly (deployer is owner in AssetToken)
+  // await tokenB.mint(await acct13.getAddress(), ethers.parseEther("1000"));
+
+  await tokenB.connect(acct13).approve(dexAddress, ethers.parseEther("500"));
+
+  // Deposit some Token B into the DEX for buy orders
+  await dex.connect(acct13).deposit(tokenBAddress, ethers.parseEther("200"));
+
+
   console.log("\n=== Deployment Summary ===");
   console.log("Token A (TKA):", tokenAAddress);
   console.log("Token B (TKB):", tokenBAddress);
