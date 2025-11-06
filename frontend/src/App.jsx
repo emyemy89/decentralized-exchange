@@ -39,6 +39,8 @@ function App() {
   const [sellOrders, setSellOrders] = useState([]);
   const [bestBid, setBestBid] = useState(null);
   const [bestAsk, setBestAsk] = useState(null);
+  const [selectedDepositToken, setSelectedDepositToken] = useState('A');
+  const [selectedWithdrawToken, setSelectedWithdrawToken] = useState('A');
 
   // Sample token addresses (you'll need to deploy these and update)
   useEffect(() => {
@@ -98,6 +100,57 @@ function App() {
   };
 
   const shortAddr = (addr) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
+
+  const getSelectedTokenAddress = (key) => (key === 'A' ? tokenAAddress : tokenBAddress);
+  const getDepositAmountByKey = (key) => (key === 'A' ? depositAmount : depositAmountB);
+  const setDepositAmountByKey = (key, v) => (key === 'A' ? setDepositAmount(v) : setDepositAmountB(v));
+  const getWithdrawAmountByKey = (key) => (key === 'A' ? withdrawAmountA : withdrawAmountB);
+  const setWithdrawAmountByKey = (key, v) => (key === 'A' ? setWithdrawAmountA(v) : setWithdrawAmountB(v));
+
+  const handleDepositUnified = async () => {
+    const tokenKey = selectedDepositToken;
+    const tokenAddr = getSelectedTokenAddress(tokenKey);
+    if (!tokenAddr) {
+      setMessage(`Please set Token ${tokenKey} address`);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const amount = parseTokenAmount(getDepositAmountByKey(tokenKey));
+      const txHash = await deposit(tokenAddr, amount);
+      setMessage(`Deposit (Token ${tokenKey}) successful! TX: ${txHash}`);
+      await loadBalances();
+    } catch (error) {
+      setMessage(`Deposit (Token ${tokenKey}) failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleWithdrawUnified = async () => {
+    const tokenKey = selectedWithdrawToken;
+    const tokenAddr = getSelectedTokenAddress(tokenKey);
+    if (!tokenAddr) {
+      setMessage(`Please set Token ${tokenKey} address`);
+      return;
+    }
+    const raw = getWithdrawAmountByKey(tokenKey);
+    if (!raw || parseFloat(raw) <= 0) {
+      setMessage('Please enter a valid withdraw amount');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const amount = parseTokenAmount(raw);
+      const txHash = await withdraw(tokenAddr, amount);
+      setMessage(`Withdraw (Token ${tokenKey}) successful! TX: ${txHash}`);
+      await loadBalances();
+    } catch (error) {
+      setMessage(`Withdraw (Token ${tokenKey}) failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleConnect = async () => {
     try {
@@ -326,20 +379,32 @@ function App() {
       {isConnected && (
         <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
           <h3>Actions</h3>
-          
-          {/* Deposit Token A */}
+
+          {/* Deposit (Token toggle) */}
           <div style={{ marginBottom: 16 }}>
-            <h4>Deposit Token A</h4>
+            <h4>Deposit</h4>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setSelectedDepositToken('A')}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #111827', background: selectedDepositToken==='A' ? '#111827' : '#fff', color: selectedDepositToken==='A' ? '#fff' : '#111827', cursor: 'pointer' }}
+                >Token A</button>
+                <button
+                  onClick={() => setSelectedDepositToken('B')}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #111827', background: selectedDepositToken==='B' ? '#111827' : '#fff', color: selectedDepositToken==='B' ? '#fff' : '#111827', cursor: 'pointer' }}
+                >Token B</button>
+              </div>
+            </div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <input
                 type="number"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
+                value={getDepositAmountByKey(selectedDepositToken)}
+                onChange={(e) => setDepositAmountByKey(selectedDepositToken, e.target.value)}
                 style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', flex: 1 }}
-                placeholder="Amount"
+                placeholder={`Amount of Token ${selectedDepositToken}`}
               />
               <button 
-                onClick={handleDeposit}
+                onClick={handleDepositUnified}
                 disabled={isLoading}
                 style={{
                   padding: '8px 16px',
@@ -351,27 +416,39 @@ function App() {
                   opacity: isLoading ? 0.6 : 1
                 }}
               >
-                {isLoading ? 'Depositing...' : 'Deposit Token A'}
+                {isLoading ? 'Depositing...' : `Deposit Token ${selectedDepositToken}`}
               </button>
             </div>
             <p style={{ marginTop: -4, color: '#6b7280' }}>
-              Approves then deposits Token A into the DEX. Needed for sell orders.
+              Approves then deposits into the DEX. Needed for orders.
             </p>
           </div>
 
-          {/* Deposit Token B */}
+          {/* Withdraw (Token toggle) */}
           <div style={{ marginBottom: 16 }}>
-            <h4>Deposit Token B</h4>
+            <h4>Withdraw</h4>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setSelectedWithdrawToken('A')}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #111827', background: selectedWithdrawToken==='A' ? '#111827' : '#fff', color: selectedWithdrawToken==='A' ? '#fff' : '#111827', cursor: 'pointer' }}
+                >Token A</button>
+                <button
+                  onClick={() => setSelectedWithdrawToken('B')}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #111827', background: selectedWithdrawToken==='B' ? '#111827' : '#fff', color: selectedWithdrawToken==='B' ? '#fff' : '#111827', cursor: 'pointer' }}
+                >Token B</button>
+              </div>
+            </div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <input
                 type="number"
-                value={depositAmountB}
-                onChange={(e) => setDepositAmountB(e.target.value)}
+                value={getWithdrawAmountByKey(selectedWithdrawToken)}
+                onChange={(e) => setWithdrawAmountByKey(selectedWithdrawToken, e.target.value)}
                 style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', flex: 1 }}
-                placeholder="Amount"
+                placeholder={`Amount of Token ${selectedWithdrawToken}`}
               />
               <button 
-                onClick={handleDepositB}
+                onClick={handleWithdrawUnified}
                 disabled={isLoading}
                 style={{
                   padding: '8px 16px',
@@ -383,75 +460,11 @@ function App() {
                   opacity: isLoading ? 0.6 : 1
                 }}
               >
-                {isLoading ? 'Depositing...' : 'Deposit Token B'}
+                {isLoading ? 'Withdrawing...' : `Withdraw Token ${selectedWithdrawToken}`}
               </button>
             </div>
             <p style={{ marginTop: -4, color: '#6b7280' }}>
-              Approves then deposits Token B into the DEX. Needed for buy orders.
-            </p>
-          </div>
-
-          {/* Withdraw Token A */}
-          <div style={{ marginBottom: 16 }}>
-            <h4>Withdraw Token A</h4>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <input
-                type="number"
-                value={withdrawAmountA}
-                onChange={(e) => setWithdrawAmountA(e.target.value)}
-                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', flex: 1 }}
-                placeholder="Amount"
-              />
-              <button 
-                onClick={handleWithdrawA}
-                disabled={isLoading}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: 4,
-                  border: '1px solid #111827',
-                  background: '#111827',
-                  color: 'white',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  opacity: isLoading ? 0.6 : 1
-                }}
-              >
-                {isLoading ? 'Withdrawing...' : 'Withdraw Token A'}
-              </button>
-            </div>
-            <p style={{ marginTop: -4, color: '#6b7280' }}>
-              Withdraws Token A from the DEX back to your wallet. Available balance: {formatTokenAmount(dexTokenABalance)}
-            </p>
-          </div>
-
-          {/* Withdraw Token B */}
-          <div style={{ marginBottom: 16 }}>
-            <h4>Withdraw Token B</h4>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <input
-                type="number"
-                value={withdrawAmountB}
-                onChange={(e) => setWithdrawAmountB(e.target.value)}
-                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', flex: 1 }}
-                placeholder="Amount"
-              />
-              <button 
-                onClick={handleWithdrawB}
-                disabled={isLoading}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: 4,
-                  border: '1px solid #111827',
-                  background: '#111827',
-                  color: 'white',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  opacity: isLoading ? 0.6 : 1
-                }}
-              >
-                {isLoading ? 'Withdrawing...' : 'Withdraw Token B'}
-              </button>
-            </div>
-            <p style={{ marginTop: -4, color: '#6b7280' }}>
-              Withdraws Token B from the DEX back to your wallet. Available balance: {formatTokenAmount(dexTokenBBalance)}
+              Available A on DEX: {formatTokenAmount(dexTokenABalance)} | Available B on DEX: {formatTokenAmount(dexTokenBBalance)}
             </p>
           </div>
 
