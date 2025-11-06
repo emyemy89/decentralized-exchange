@@ -47,7 +47,7 @@ async function main() {
 
 
     // Fund account 13 with Token A and approve DEX
-  const acct13 = await provider.getSigner(13);
+  const acct13 = await provider.getSigner(2);
   await tokenA.transfer(await acct13.getAddress(), ethers.parseEther("1000")); // or: await tokenA.mint(...)
 
   await tokenA.connect(acct13).approve(dexAddress, ethers.parseEther("500"));

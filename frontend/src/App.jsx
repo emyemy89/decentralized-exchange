@@ -13,6 +13,7 @@ function App() {
     withdraw,
     createBuyOrder,
     createSellOrder,
+    getOrderBook,
     formatTokenAmount,
     parseTokenAmount
   } = useDEX();
@@ -33,6 +34,11 @@ function App() {
   const [sellOrderPrice, setSellOrderPrice] = useState('2');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [orders, setOrders] = useState([]);
+  const [buyOrders, setBuyOrders] = useState([]);
+  const [sellOrders, setSellOrders] = useState([]);
+  const [bestBid, setBestBid] = useState(null);
+  const [bestAsk, setBestAsk] = useState(null);
 
   // Sample token addresses (you'll need to deploy these and update)
   useEffect(() => {
@@ -45,6 +51,7 @@ function App() {
   useEffect(() => {
     if (isConnected && tokenAAddress && tokenBAddress) {
       loadBalances();
+      loadOrderBook();
     }
   }, [isConnected, tokenAAddress, tokenBAddress]);
 
@@ -63,6 +70,34 @@ function App() {
       console.error('Error loading balances:', error);
     }
   };
+
+  const loadOrderBook = async () => {
+    if (!tokenAAddress) return;
+    try {
+      const allOrders = await getOrderBook(tokenAAddress);
+      setOrders(allOrders);
+
+      // Split into buy/sell
+      const buys = allOrders.filter(o => o.isBuyOrder && !o.isFilled);
+      const sells = allOrders.filter(o => !o.isBuyOrder && !o.isFilled);
+
+      // Sort: buys by price desc, sells by price asc
+      buys.sort((a, b) => (BigInt(b.price) > BigInt(a.price) ? 1 : BigInt(b.price) < BigInt(a.price) ? -1 : 0));
+      sells.sort((a, b) => (BigInt(a.price) > BigInt(b.price) ? 1 : BigInt(a.price) < BigInt(b.price) ? -1 : 0));
+
+      setBuyOrders(buys);
+      setSellOrders(sells);
+
+      const bid = buys.length ? buys[0].price : null;
+      const ask = sells.length ? sells[0].price : null;
+      setBestBid(bid);
+      setBestAsk(ask);
+    } catch (error) {
+      console.error('Error loading order book:', error);
+    }
+  };
+
+  const shortAddr = (addr) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
 
   const handleConnect = async () => {
     try {
@@ -172,6 +207,7 @@ function App() {
       const txHash = await createBuyOrder(tokenAAddress, tokenBAddress, amount, price);
       setMessage(`Order created successfully! TX: ${txHash}`);
       await loadBalances(); // Refresh balances
+      await loadOrderBook();
     } catch (error) {
       setMessage(`Order creation failed: ${error.message}`);
     } finally {
@@ -193,6 +229,7 @@ function App() {
       const txHash = await createSellOrder(tokenAAddress, tokenBAddress, amount, price);
       setMessage(`Sell order created successfully! TX: ${txHash}`);
       await loadBalances();
+      await loadOrderBook();
     } catch (error) {
       setMessage(`Sell order creation failed: ${error.message}`);
     } finally {
@@ -508,6 +545,94 @@ function App() {
           marginTop: 16
         }}>
           {message}
+        </div>
+      )}
+
+      {/* Order Book & Conversion Rates */}
+      {isConnected && (
+        <div style={{ marginTop: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0 }}>Order Book (Token A / Token B)</h3>
+            <button 
+              onClick={loadOrderBook}
+              style={{ padding: '6px 12px', borderRadius: 4, border: '1px solid #111827', background: '#fff', cursor: 'pointer' }}
+            >
+              Refresh
+            </button>
+          </div>
+
+          {/* Conversion rates */}
+          <div style={{ marginTop: 12, padding: 12, background: '#f9fafb', borderRadius: 6 }}>
+            <div style={{ display: 'flex', gap: 24 }}>
+              <div>
+                <strong>Best Bid</strong>
+                <div>{bestBid ? `${formatTokenAmount(bestBid)} B per 1 A` : '-'}</div>
+              </div>
+              <div>
+                <strong>Best Ask</strong>
+                <div>{bestAsk ? `${formatTokenAmount(bestAsk)} B per 1 A` : '-'}</div>
+              </div>
+              <div>
+                <strong>Mid</strong>
+                <div>
+                  {bestBid && bestAsk
+                    ? `${formatTokenAmount((BigInt(bestBid) + BigInt(bestAsk)) / 2n)} B per 1 A`
+                    : '-'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Books */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+            {/* Buy Orders */}
+            <div>
+              <h4 style={{ marginTop: 0 }}>Buy Orders</h4>
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: 6 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '8px 12px', background: '#f3f4f6', fontWeight: 600 }}>
+                  <div>Price (B/A)</div>
+                  <div>Amount (A)</div>
+                  <div>Trader</div>
+                </div>
+                <div>
+                  {buyOrders.length === 0 && (
+                    <div style={{ padding: 12, color: '#6b7280' }}>No buy orders</div>
+                  )}
+                  {buyOrders.map((o) => (
+                    <div key={o.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '8px 12px', borderTop: '1px solid #f3f4f6' }}>
+                      <div>{formatTokenAmount(o.price)}</div>
+                      <div>{formatTokenAmount(o.amount)}</div>
+                      <div>{shortAddr(o.trader)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Sell Orders */}
+            <div>
+              <h4 style={{ marginTop: 0 }}>Sell Orders</h4>
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: 6 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '8px 12px', background: '#f3f4f6', fontWeight: 600 }}>
+                  <div>Price (B/A)</div>
+                  <div>Amount (A)</div>
+                  <div>Trader</div>
+                </div>
+                <div>
+                  {sellOrders.length === 0 && (
+                    <div style={{ padding: 12, color: '#6b7280' }}>No sell orders</div>
+                  )}
+                  {sellOrders.map((o) => (
+                    <div key={o.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '8px 12px', borderTop: '1px solid #f3f4f6' }}>
+                      <div>{formatTokenAmount(o.price)}</div>
+                      <div>{formatTokenAmount(o.amount)}</div>
+                      <div>{shortAddr(o.trader)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
