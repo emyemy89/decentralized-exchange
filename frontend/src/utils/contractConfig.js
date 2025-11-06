@@ -30,6 +30,17 @@ export const DEX_ABI = [
   {
     "anonymous": false,
     "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "id", "type": "uint256" },
+      { "indexed": true, "internalType": "address", "name": "trader", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "refundToken", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "refundAmount", "type": "uint256" }
+    ],
+    "name": "OrderCanceled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
       {
         "indexed": true,
         "internalType": "uint256",
@@ -75,6 +86,16 @@ export const DEX_ABI = [
     ],
     "name": "NewOrder",
     "type": "event"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "token", "type": "address" },
+      { "internalType": "uint256", "name": "orderId", "type": "uint256" }
+    ],
+    "name": "cancelOrder",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
     "anonymous": false,

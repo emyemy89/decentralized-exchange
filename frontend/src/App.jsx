@@ -13,6 +13,8 @@ function App() {
     withdraw,
     createBuyOrder,
     createSellOrder,
+    getOrderBook,
+    cancelOrder,
     formatTokenAmount,
     parseTokenAmount
   } = useDEX();
@@ -33,6 +35,13 @@ function App() {
   const [sellOrderPrice, setSellOrderPrice] = useState('2');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [orders, setOrders] = useState([]);
+  const [buyOrders, setBuyOrders] = useState([]);
+  const [sellOrders, setSellOrders] = useState([]);
+  const [bestBid, setBestBid] = useState(null);
+  const [bestAsk, setBestAsk] = useState(null);
+  const [selectedDepositToken, setSelectedDepositToken] = useState('A');
+  const [selectedWithdrawToken, setSelectedWithdrawToken] = useState('A');
 
   // Sample token addresses (you'll need to deploy these and update)
   useEffect(() => {
@@ -45,6 +54,7 @@ function App() {
   useEffect(() => {
     if (isConnected && tokenAAddress && tokenBAddress) {
       loadBalances();
+      loadOrderBook();
     }
   }, [isConnected, tokenAAddress, tokenBAddress]);
 
@@ -61,6 +71,100 @@ function App() {
       setDexTokenBBalance(dexBBal);
     } catch (error) {
       console.error('Error loading balances:', error);
+    }
+  };
+
+  const loadOrderBook = async () => {
+    if (!tokenAAddress) return;
+    try {
+      const allOrders = await getOrderBook(tokenAAddress);
+      setOrders(allOrders);
+
+      // Split into buy/sell
+      const buys = allOrders.filter(o => o.isBuyOrder && !o.isFilled);
+      const sells = allOrders.filter(o => !o.isBuyOrder && !o.isFilled);
+
+      // Sort: buys by price desc, sells by price asc
+      buys.sort((a, b) => (BigInt(b.price) > BigInt(a.price) ? 1 : BigInt(b.price) < BigInt(a.price) ? -1 : 0));
+      sells.sort((a, b) => (BigInt(a.price) > BigInt(b.price) ? 1 : BigInt(a.price) < BigInt(b.price) ? -1 : 0));
+
+      setBuyOrders(buys);
+      setSellOrders(sells);
+
+      const bid = buys.length ? buys[0].price : null;
+      const ask = sells.length ? sells[0].price : null;
+      setBestBid(bid);
+      setBestAsk(ask);
+    } catch (error) {
+      console.error('Error loading order book:', error);
+    }
+  };
+
+  const shortAddr = (addr) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
+
+  const handleCancelOrder = async (orderId) => {
+    if (!tokenAAddress) return;
+    setIsLoading(true);
+    try {
+      const txHash = await cancelOrder(tokenAAddress, orderId);
+      setMessage(`Order ${orderId} canceled. TX: ${txHash}`);
+      await loadBalances();
+      await loadOrderBook();
+    } catch (error) {
+      setMessage(`Cancel failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getSelectedTokenAddress = (key) => (key === 'A' ? tokenAAddress : tokenBAddress);
+  const getDepositAmountByKey = (key) => (key === 'A' ? depositAmount : depositAmountB);
+  const setDepositAmountByKey = (key, v) => (key === 'A' ? setDepositAmount(v) : setDepositAmountB(v));
+  const getWithdrawAmountByKey = (key) => (key === 'A' ? withdrawAmountA : withdrawAmountB);
+  const setWithdrawAmountByKey = (key, v) => (key === 'A' ? setWithdrawAmountA(v) : setWithdrawAmountB(v));
+
+  const handleDepositUnified = async () => {
+    const tokenKey = selectedDepositToken;
+    const tokenAddr = getSelectedTokenAddress(tokenKey);
+    if (!tokenAddr) {
+      setMessage(`Please set Token ${tokenKey} address`);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const amount = parseTokenAmount(getDepositAmountByKey(tokenKey));
+      const txHash = await deposit(tokenAddr, amount);
+      setMessage(`Deposit (Token ${tokenKey}) successful! TX: ${txHash}`);
+      await loadBalances();
+    } catch (error) {
+      setMessage(`Deposit (Token ${tokenKey}) failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleWithdrawUnified = async () => {
+    const tokenKey = selectedWithdrawToken;
+    const tokenAddr = getSelectedTokenAddress(tokenKey);
+    if (!tokenAddr) {
+      setMessage(`Please set Token ${tokenKey} address`);
+      return;
+    }
+    const raw = getWithdrawAmountByKey(tokenKey);
+    if (!raw || parseFloat(raw) <= 0) {
+      setMessage('Please enter a valid withdraw amount');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const amount = parseTokenAmount(raw);
+      const txHash = await withdraw(tokenAddr, amount);
+      setMessage(`Withdraw (Token ${tokenKey}) successful! TX: ${txHash}`);
+      await loadBalances();
+    } catch (error) {
+      setMessage(`Withdraw (Token ${tokenKey}) failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -172,6 +276,7 @@ function App() {
       const txHash = await createBuyOrder(tokenAAddress, tokenBAddress, amount, price);
       setMessage(`Order created successfully! TX: ${txHash}`);
       await loadBalances(); // Refresh balances
+      await loadOrderBook();
     } catch (error) {
       setMessage(`Order creation failed: ${error.message}`);
     } finally {
@@ -193,6 +298,7 @@ function App() {
       const txHash = await createSellOrder(tokenAAddress, tokenBAddress, amount, price);
       setMessage(`Sell order created successfully! TX: ${txHash}`);
       await loadBalances();
+      await loadOrderBook();
     } catch (error) {
       setMessage(`Sell order creation failed: ${error.message}`);
     } finally {
@@ -289,133 +395,99 @@ function App() {
       {isConnected && (
         <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
           <h3>Actions</h3>
-          
-          {/* Deposit Token A */}
-          <div style={{ marginBottom: 16 }}>
-            <h4>Deposit Token A</h4>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+
+          {/* Deposit (concise) */}
+          <div style={{ marginBottom: 16, padding: 12, border: '1px solid #e5e7eb', borderRadius: 8, background: '#ffffff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h4 style={{ margin: 0 }}>
+                <span style={{ background: '#f3f4f6', color: '#111827', padding: '4px 8px', borderRadius: 6 }}>Deposit</span>
+              </h4>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setSelectedDepositToken('A')}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: selectedDepositToken==='A' ? '1px solid #111827' : '1px solid #d1d5db', background: selectedDepositToken==='A' ? '#111827' : '#fff', color: selectedDepositToken==='A' ? '#fff' : '#111827', cursor: 'pointer' }}
+                >Token A</button>
+                <button
+                  onClick={() => setSelectedDepositToken('B')}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: selectedDepositToken==='B' ? '1px solid #111827' : '1px solid #d1d5db', background: selectedDepositToken==='B' ? '#111827' : '#fff', color: selectedDepositToken==='B' ? '#fff' : '#111827', cursor: 'pointer' }}
+                >Token B</button>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <input
                 type="number"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', flex: 1 }}
-                placeholder="Amount"
+                min="0"
+                step="any"
+                value={getDepositAmountByKey(selectedDepositToken)}
+                onChange={(e) => setDepositAmountByKey(selectedDepositToken, e.target.value)}
+                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', width: 140 }}
+                placeholder={`Amount`}
               />
               <button 
-                onClick={handleDeposit}
+                onClick={handleDepositUnified}
                 disabled={isLoading}
                 style={{
                   padding: '8px 16px',
-                  borderRadius: 4,
+                  borderRadius: 6,
                   border: '1px solid #111827',
                   background: '#111827',
-                  color: 'white',
+                  color: '#ffffff',
                   cursor: isLoading ? 'not-allowed' : 'pointer',
-                  opacity: isLoading ? 0.6 : 1
+                  opacity: isLoading ? 0.8 : 1
                 }}
               >
-                {isLoading ? 'Depositing...' : 'Deposit Token A'}
+                {isLoading ? 'Depositing...' : `Deposit ${selectedDepositToken}`}
               </button>
+              <span style={{ color: '#6b7280', fontSize: 12 }}>Approve then deposit.</span>
             </div>
-            <p style={{ marginTop: -4, color: '#6b7280' }}>
-              Approves then deposits Token A into the DEX. Needed for sell orders.
-            </p>
           </div>
 
-          {/* Deposit Token B */}
-          <div style={{ marginBottom: 16 }}>
-            <h4>Deposit Token B</h4>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          {/* Withdraw (concise) */}
+          <div style={{ marginBottom: 16, padding: 12, border: '1px solid #e5e7eb', borderRadius: 8, background: '#ffffff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h4 style={{ margin: 0 }}>
+                <span style={{ background: '#f3f4f6', color: '#111827', padding: '4px 8px', borderRadius: 6 }}>Withdraw</span>
+              </h4>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setSelectedWithdrawToken('A')}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: selectedWithdrawToken==='A' ? '1px solid #111827' : '1px solid #d1d5db', background: selectedWithdrawToken==='A' ? '#111827' : '#fff', color: selectedWithdrawToken==='A' ? '#fff' : '#111827', cursor: 'pointer' }}
+                >Token A</button>
+                <button
+                  onClick={() => setSelectedWithdrawToken('B')}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: selectedWithdrawToken==='B' ? '1px solid #111827' : '1px solid #d1d5db', background: selectedWithdrawToken==='B' ? '#111827' : '#fff', color: selectedWithdrawToken==='B' ? '#fff' : '#111827', cursor: 'pointer' }}
+                >Token B</button>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <input
                 type="number"
-                value={depositAmountB}
-                onChange={(e) => setDepositAmountB(e.target.value)}
-                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', flex: 1 }}
-                placeholder="Amount"
+                min="0"
+                step="any"
+                value={getWithdrawAmountByKey(selectedWithdrawToken)}
+                onChange={(e) => setWithdrawAmountByKey(selectedWithdrawToken, e.target.value)}
+                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', width: 140 }}
+                placeholder={`Amount`}
               />
               <button 
-                onClick={handleDepositB}
+                onClick={handleWithdrawUnified}
                 disabled={isLoading}
                 style={{
                   padding: '8px 16px',
-                  borderRadius: 4,
+                  borderRadius: 6,
                   border: '1px solid #111827',
                   background: '#111827',
-                  color: 'white',
+                  color: '#ffffff',
                   cursor: isLoading ? 'not-allowed' : 'pointer',
-                  opacity: isLoading ? 0.6 : 1
+                  opacity: isLoading ? 0.8 : 1
                 }}
               >
-                {isLoading ? 'Depositing...' : 'Deposit Token B'}
+                {isLoading ? 'Withdrawing...' : `Withdraw ${selectedWithdrawToken}`}
               </button>
+              <span style={{ color: '#6b7280', fontSize: 12 }}>
+                Available: {selectedWithdrawToken==='A' ? formatTokenAmount(dexTokenABalance) : formatTokenAmount(dexTokenBBalance)}
+              </span>
             </div>
-            <p style={{ marginTop: -4, color: '#6b7280' }}>
-              Approves then deposits Token B into the DEX. Needed for buy orders.
-            </p>
-          </div>
-
-          {/* Withdraw Token A */}
-          <div style={{ marginBottom: 16 }}>
-            <h4>Withdraw Token A</h4>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <input
-                type="number"
-                value={withdrawAmountA}
-                onChange={(e) => setWithdrawAmountA(e.target.value)}
-                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', flex: 1 }}
-                placeholder="Amount"
-              />
-              <button 
-                onClick={handleWithdrawA}
-                disabled={isLoading}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: 4,
-                  border: '1px solid #111827',
-                  background: '#111827',
-                  color: 'white',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  opacity: isLoading ? 0.6 : 1
-                }}
-              >
-                {isLoading ? 'Withdrawing...' : 'Withdraw Token A'}
-              </button>
-            </div>
-            <p style={{ marginTop: -4, color: '#6b7280' }}>
-              Withdraws Token A from the DEX back to your wallet. Available balance: {formatTokenAmount(dexTokenABalance)}
-            </p>
-          </div>
-
-          {/* Withdraw Token B */}
-          <div style={{ marginBottom: 16 }}>
-            <h4>Withdraw Token B</h4>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <input
-                type="number"
-                value={withdrawAmountB}
-                onChange={(e) => setWithdrawAmountB(e.target.value)}
-                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', flex: 1 }}
-                placeholder="Amount"
-              />
-              <button 
-                onClick={handleWithdrawB}
-                disabled={isLoading}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: 4,
-                  border: '1px solid #111827',
-                  background: '#111827',
-                  color: 'white',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  opacity: isLoading ? 0.6 : 1
-                }}
-              >
-                {isLoading ? 'Withdrawing...' : 'Withdraw Token B'}
-              </button>
-            </div>
-            <p style={{ marginTop: -4, color: '#6b7280' }}>
-              Withdraws Token B from the DEX back to your wallet. Available balance: {formatTokenAmount(dexTokenBBalance)}
-            </p>
           </div>
 
           {/* Create Buy Order */}
@@ -508,6 +580,128 @@ function App() {
           marginTop: 16
         }}>
           {message}
+        </div>
+      )}
+
+      {/* Order Book & Conversion Rates */}
+      {isConnected && (
+        <div className="order-book">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0 }}>Order Book (Token A / Token B)</h3>
+            <button 
+              onClick={loadOrderBook}
+              style={{ padding: '6px 12px', borderRadius: 4, border: '1px solid #111827', background: '#fff', cursor: 'pointer' }}
+            >
+              Refresh
+            </button>
+          </div>
+
+          {/* Conversion rates */}
+          <div className="conversion">
+            <div className="conversion__items" style={{ color: '#000' }}>
+              <div>
+                <strong style={{ color: '#000' }}>Best Bid</strong>
+                <div style={{ color: '#000' }}>{bestBid ? `${formatTokenAmount(bestBid)} B per 1 A` : '-'}</div>
+              </div>
+              <div>
+                <strong style={{ color: '#000' }}>Best Ask</strong>
+                <div style={{ color: '#000' }}>{bestAsk ? `${formatTokenAmount(bestAsk)} B per 1 A` : '-'}</div>
+              </div>
+              <div>
+                <strong style={{ color: '#000' }}>Mid</strong>
+                <div style={{ color: '#000' }}>
+                  {bestBid && bestAsk
+                    ? `${formatTokenAmount((BigInt(bestBid) + BigInt(bestAsk)) / 2n)} B per 1 A`
+                    : '-'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Books */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+            {/* Buy Orders */}
+            <div>
+              <h4 style={{ marginTop: 0 }}>Buy Orders</h4>
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: 6 }}>
+                <div className="order-book__header-row">
+                  <div>Price (B/A)</div>
+                  <div>Amount (A)</div>
+                  <div>Trader</div>
+                  <div></div>
+                </div>
+                <div>
+                  {buyOrders.length === 0 && (
+                    <div style={{ padding: 12, color: '#6b7280' }}>No buy orders</div>
+                  )}
+                  {buyOrders.map((o) => {
+                    const isMine = account && o.trader && account.toLowerCase() === o.trader.toLowerCase();
+                    return (
+                      <div key={o.id} className="order-book__row">
+                        <div>{formatTokenAmount(o.price)}</div>
+                        <div>{formatTokenAmount(o.amount)}</div>
+                        <div>
+                          {shortAddr(o.trader)} {isMine && <span className="me-tag">(Me)</span>}
+                        </div>
+                        <div>
+                          {isMine && (
+                            <button
+                              onClick={() => handleCancelOrder(o.id)}
+                              disabled={isLoading}
+                              className="btn-cancel"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Sell Orders */}
+            <div>
+              <h4 style={{ marginTop: 0 }}>Sell Orders</h4>
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: 6 }}>
+                <div className="order-book__header-row">
+                  <div>Price (B/A)</div>
+                  <div>Amount (A)</div>
+                  <div>Trader</div>
+                  <div></div>
+                </div>
+                <div>
+                  {sellOrders.length === 0 && (
+                    <div style={{ padding: 12, color: '#6b7280' }}>No sell orders</div>
+                  )}
+                  {sellOrders.map((o) => {
+                    const isMine = account && o.trader && account.toLowerCase() === o.trader.toLowerCase();
+                    return (
+                      <div key={o.id} className="order-book__row">
+                        <div>{formatTokenAmount(o.price)}</div>
+                        <div>{formatTokenAmount(o.amount)}</div>
+                        <div>
+                          {shortAddr(o.trader)} {isMine && <span className="me-tag">(Me)</span>}
+                        </div>
+                        <div>
+                          {isMine && (
+                            <button
+                              onClick={() => handleCancelOrder(o.id)}
+                              disabled={isLoading}
+                              className="btn-cancel"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
