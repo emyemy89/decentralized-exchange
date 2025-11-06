@@ -585,7 +585,7 @@ function App() {
 
       {/* Order Book & Conversion Rates */}
       {isConnected && (
-        <div style={{ marginTop: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+        <div className="order-book">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0 }}>Order Book (Token A / Token B)</h3>
             <button 
@@ -597,19 +597,19 @@ function App() {
           </div>
 
           {/* Conversion rates */}
-          <div style={{ marginTop: 12, padding: 12, background: '#f9fafb', borderRadius: 6 }}>
-            <div style={{ display: 'flex', gap: 24 }}>
+          <div className="conversion">
+            <div className="conversion__items" style={{ color: '#000' }}>
               <div>
-                <strong>Best Bid</strong>
-                <div>{bestBid ? `${formatTokenAmount(bestBid)} B per 1 A` : '-'}</div>
+                <strong style={{ color: '#000' }}>Best Bid</strong>
+                <div style={{ color: '#000' }}>{bestBid ? `${formatTokenAmount(bestBid)} B per 1 A` : '-'}</div>
               </div>
               <div>
-                <strong>Best Ask</strong>
-                <div>{bestAsk ? `${formatTokenAmount(bestAsk)} B per 1 A` : '-'}</div>
+                <strong style={{ color: '#000' }}>Best Ask</strong>
+                <div style={{ color: '#000' }}>{bestAsk ? `${formatTokenAmount(bestAsk)} B per 1 A` : '-'}</div>
               </div>
               <div>
-                <strong>Mid</strong>
-                <div>
+                <strong style={{ color: '#000' }}>Mid</strong>
+                <div style={{ color: '#000' }}>
                   {bestBid && bestAsk
                     ? `${formatTokenAmount((BigInt(bestBid) + BigInt(bestAsk)) / 2n)} B per 1 A`
                     : '-'}
@@ -624,7 +624,7 @@ function App() {
             <div>
               <h4 style={{ marginTop: 0 }}>Buy Orders</h4>
               <div style={{ border: '1px solid #e5e7eb', borderRadius: 6 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 0.6fr', padding: '8px 12px', background: '#f3f4f6', fontWeight: 600 }}>
+                <div className="order-book__header-row">
                   <div>Price (B/A)</div>
                   <div>Amount (A)</div>
                   <div>Trader</div>
@@ -637,18 +637,18 @@ function App() {
                   {buyOrders.map((o) => {
                     const isMine = account && o.trader && account.toLowerCase() === o.trader.toLowerCase();
                     return (
-                      <div key={o.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 0.6fr', alignItems: 'center', padding: '8px 12px', borderTop: '1px solid #f3f4f6' }}>
+                      <div key={o.id} className="order-book__row">
                         <div>{formatTokenAmount(o.price)}</div>
                         <div>{formatTokenAmount(o.amount)}</div>
                         <div>
-                          {shortAddr(o.trader)} {isMine && <span style={{ marginLeft: 6, fontSize: 12, color: '#059669' }}>(Me)</span>}
+                          {shortAddr(o.trader)} {isMine && <span className="me-tag">(Me)</span>}
                         </div>
                         <div>
                           {isMine && (
                             <button
                               onClick={() => handleCancelOrder(o.id)}
                               disabled={isLoading}
-                              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #dc2626', background: '#fff', color: '#dc2626', cursor: isLoading ? 'not-allowed' : 'pointer' }}
+                              className="btn-cancel"
                             >
                               Cancel
                             </button>
@@ -665,7 +665,7 @@ function App() {
             <div>
               <h4 style={{ marginTop: 0 }}>Sell Orders</h4>
               <div style={{ border: '1px solid #e5e7eb', borderRadius: 6 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 0.6fr', padding: '8px 12px', background: '#f3f4f6', fontWeight: 600 }}>
+                <div className="order-book__header-row">
                   <div>Price (B/A)</div>
                   <div>Amount (A)</div>
                   <div>Trader</div>
@@ -678,18 +678,18 @@ function App() {
                   {sellOrders.map((o) => {
                     const isMine = account && o.trader && account.toLowerCase() === o.trader.toLowerCase();
                     return (
-                      <div key={o.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 0.6fr', alignItems: 'center', padding: '8px 12px', borderTop: '1px solid #f3f4f6' }}>
+                      <div key={o.id} className="order-book__row">
                         <div>{formatTokenAmount(o.price)}</div>
                         <div>{formatTokenAmount(o.amount)}</div>
                         <div>
-                          {shortAddr(o.trader)} {isMine && <span style={{ marginLeft: 6, fontSize: 12, color: '#059669' }}>(Me)</span>}
+                          {shortAddr(o.trader)} {isMine && <span className="me-tag">(Me)</span>}
                         </div>
                         <div>
                           {isMine && (
                             <button
                               onClick={() => handleCancelOrder(o.id)}
                               disabled={isLoading}
-                              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #dc2626', background: '#fff', color: '#dc2626', cursor: isLoading ? 'not-allowed' : 'pointer' }}
+                              className="btn-cancel"
                             >
                               Cancel
                             </button>
