@@ -380,92 +380,98 @@ function App() {
         <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
           <h3>Actions</h3>
 
-          {/* Deposit (Token toggle) */}
-          <div style={{ marginBottom: 16 }}>
-            <h4>Deposit</h4>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          {/* Deposit (concise) */}
+          <div style={{ marginBottom: 16, padding: 12, border: '1px solid #e5e7eb', borderRadius: 8, background: '#ffffff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h4 style={{ margin: 0 }}>
+                <span style={{ background: '#f3f4f6', color: '#111827', padding: '4px 8px', borderRadius: 6 }}>Deposit</span>
+              </h4>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => setSelectedDepositToken('A')}
-                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #111827', background: selectedDepositToken==='A' ? '#111827' : '#fff', color: selectedDepositToken==='A' ? '#fff' : '#111827', cursor: 'pointer' }}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: selectedDepositToken==='A' ? '1px solid #111827' : '1px solid #d1d5db', background: selectedDepositToken==='A' ? '#111827' : '#fff', color: selectedDepositToken==='A' ? '#fff' : '#111827', cursor: 'pointer' }}
                 >Token A</button>
                 <button
                   onClick={() => setSelectedDepositToken('B')}
-                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #111827', background: selectedDepositToken==='B' ? '#111827' : '#fff', color: selectedDepositToken==='B' ? '#fff' : '#111827', cursor: 'pointer' }}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: selectedDepositToken==='B' ? '1px solid #111827' : '1px solid #d1d5db', background: selectedDepositToken==='B' ? '#111827' : '#fff', color: selectedDepositToken==='B' ? '#fff' : '#111827', cursor: 'pointer' }}
                 >Token B</button>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <input
                 type="number"
+                min="0"
+                step="any"
                 value={getDepositAmountByKey(selectedDepositToken)}
                 onChange={(e) => setDepositAmountByKey(selectedDepositToken, e.target.value)}
-                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', flex: 1 }}
-                placeholder={`Amount of Token ${selectedDepositToken}`}
+                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', width: 140 }}
+                placeholder={`Amount`}
               />
               <button 
                 onClick={handleDepositUnified}
                 disabled={isLoading}
                 style={{
                   padding: '8px 16px',
-                  borderRadius: 4,
+                  borderRadius: 6,
                   border: '1px solid #111827',
                   background: '#111827',
-                  color: 'white',
+                  color: '#ffffff',
                   cursor: isLoading ? 'not-allowed' : 'pointer',
-                  opacity: isLoading ? 0.6 : 1
+                  opacity: isLoading ? 0.8 : 1
                 }}
               >
-                {isLoading ? 'Depositing...' : `Deposit Token ${selectedDepositToken}`}
+                {isLoading ? 'Depositing...' : `Deposit ${selectedDepositToken}`}
               </button>
+              <span style={{ color: '#6b7280', fontSize: 12 }}>Approve then deposit.</span>
             </div>
-            <p style={{ marginTop: -4, color: '#6b7280' }}>
-              Approves then deposits into the DEX. Needed for orders.
-            </p>
           </div>
 
-          {/* Withdraw (Token toggle) */}
-          <div style={{ marginBottom: 16 }}>
-            <h4>Withdraw</h4>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          {/* Withdraw (concise) */}
+          <div style={{ marginBottom: 16, padding: 12, border: '1px solid #e5e7eb', borderRadius: 8, background: '#ffffff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h4 style={{ margin: 0 }}>
+                <span style={{ background: '#f3f4f6', color: '#111827', padding: '4px 8px', borderRadius: 6 }}>Withdraw</span>
+              </h4>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => setSelectedWithdrawToken('A')}
-                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #111827', background: selectedWithdrawToken==='A' ? '#111827' : '#fff', color: selectedWithdrawToken==='A' ? '#fff' : '#111827', cursor: 'pointer' }}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: selectedWithdrawToken==='A' ? '1px solid #111827' : '1px solid #d1d5db', background: selectedWithdrawToken==='A' ? '#111827' : '#fff', color: selectedWithdrawToken==='A' ? '#fff' : '#111827', cursor: 'pointer' }}
                 >Token A</button>
                 <button
                   onClick={() => setSelectedWithdrawToken('B')}
-                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #111827', background: selectedWithdrawToken==='B' ? '#111827' : '#fff', color: selectedWithdrawToken==='B' ? '#fff' : '#111827', cursor: 'pointer' }}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: selectedWithdrawToken==='B' ? '1px solid #111827' : '1px solid #d1d5db', background: selectedWithdrawToken==='B' ? '#111827' : '#fff', color: selectedWithdrawToken==='B' ? '#fff' : '#111827', cursor: 'pointer' }}
                 >Token B</button>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <input
                 type="number"
+                min="0"
+                step="any"
                 value={getWithdrawAmountByKey(selectedWithdrawToken)}
                 onChange={(e) => setWithdrawAmountByKey(selectedWithdrawToken, e.target.value)}
-                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', flex: 1 }}
-                placeholder={`Amount of Token ${selectedWithdrawToken}`}
+                style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', width: 140 }}
+                placeholder={`Amount`}
               />
               <button 
                 onClick={handleWithdrawUnified}
                 disabled={isLoading}
                 style={{
                   padding: '8px 16px',
-                  borderRadius: 4,
+                  borderRadius: 6,
                   border: '1px solid #111827',
                   background: '#111827',
-                  color: 'white',
+                  color: '#ffffff',
                   cursor: isLoading ? 'not-allowed' : 'pointer',
-                  opacity: isLoading ? 0.6 : 1
+                  opacity: isLoading ? 0.8 : 1
                 }}
               >
-                {isLoading ? 'Withdrawing...' : `Withdraw Token ${selectedWithdrawToken}`}
+                {isLoading ? 'Withdrawing...' : `Withdraw ${selectedWithdrawToken}`}
               </button>
+              <span style={{ color: '#6b7280', fontSize: 12 }}>
+                Available: {selectedWithdrawToken==='A' ? formatTokenAmount(dexTokenABalance) : formatTokenAmount(dexTokenBBalance)}
+              </span>
             </div>
-            <p style={{ marginTop: -4, color: '#6b7280' }}>
-              Available A on DEX: {formatTokenAmount(dexTokenABalance)} | Available B on DEX: {formatTokenAmount(dexTokenBBalance)}
-            </p>
           </div>
 
           {/* Create Buy Order */}
