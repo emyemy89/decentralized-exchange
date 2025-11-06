@@ -14,6 +14,7 @@ function App() {
     createBuyOrder,
     createSellOrder,
     getOrderBook,
+    cancelOrder,
     formatTokenAmount,
     parseTokenAmount
   } = useDEX();
@@ -100,6 +101,21 @@ function App() {
   };
 
   const shortAddr = (addr) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
+
+  const handleCancelOrder = async (orderId) => {
+    if (!tokenAAddress) return;
+    setIsLoading(true);
+    try {
+      const txHash = await cancelOrder(tokenAAddress, orderId);
+      setMessage(`Order ${orderId} canceled. TX: ${txHash}`);
+      await loadBalances();
+      await loadOrderBook();
+    } catch (error) {
+      setMessage(`Cancel failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getSelectedTokenAddress = (key) => (key === 'A' ? tokenAAddress : tokenBAddress);
   const getDepositAmountByKey = (key) => (key === 'A' ? depositAmount : depositAmountB);
@@ -608,22 +624,39 @@ function App() {
             <div>
               <h4 style={{ marginTop: 0 }}>Buy Orders</h4>
               <div style={{ border: '1px solid #e5e7eb', borderRadius: 6 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '8px 12px', background: '#f3f4f6', fontWeight: 600 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 0.6fr', padding: '8px 12px', background: '#f3f4f6', fontWeight: 600 }}>
                   <div>Price (B/A)</div>
                   <div>Amount (A)</div>
                   <div>Trader</div>
+                  <div></div>
                 </div>
                 <div>
                   {buyOrders.length === 0 && (
                     <div style={{ padding: 12, color: '#6b7280' }}>No buy orders</div>
                   )}
-                  {buyOrders.map((o) => (
-                    <div key={o.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '8px 12px', borderTop: '1px solid #f3f4f6' }}>
-                      <div>{formatTokenAmount(o.price)}</div>
-                      <div>{formatTokenAmount(o.amount)}</div>
-                      <div>{shortAddr(o.trader)}</div>
-                    </div>
-                  ))}
+                  {buyOrders.map((o) => {
+                    const isMine = account && o.trader && account.toLowerCase() === o.trader.toLowerCase();
+                    return (
+                      <div key={o.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 0.6fr', alignItems: 'center', padding: '8px 12px', borderTop: '1px solid #f3f4f6' }}>
+                        <div>{formatTokenAmount(o.price)}</div>
+                        <div>{formatTokenAmount(o.amount)}</div>
+                        <div>
+                          {shortAddr(o.trader)} {isMine && <span style={{ marginLeft: 6, fontSize: 12, color: '#059669' }}>(Me)</span>}
+                        </div>
+                        <div>
+                          {isMine && (
+                            <button
+                              onClick={() => handleCancelOrder(o.id)}
+                              disabled={isLoading}
+                              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #dc2626', background: '#fff', color: '#dc2626', cursor: isLoading ? 'not-allowed' : 'pointer' }}
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -632,22 +665,39 @@ function App() {
             <div>
               <h4 style={{ marginTop: 0 }}>Sell Orders</h4>
               <div style={{ border: '1px solid #e5e7eb', borderRadius: 6 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '8px 12px', background: '#f3f4f6', fontWeight: 600 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 0.6fr', padding: '8px 12px', background: '#f3f4f6', fontWeight: 600 }}>
                   <div>Price (B/A)</div>
                   <div>Amount (A)</div>
                   <div>Trader</div>
+                  <div></div>
                 </div>
                 <div>
                   {sellOrders.length === 0 && (
                     <div style={{ padding: 12, color: '#6b7280' }}>No sell orders</div>
                   )}
-                  {sellOrders.map((o) => (
-                    <div key={o.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '8px 12px', borderTop: '1px solid #f3f4f6' }}>
-                      <div>{formatTokenAmount(o.price)}</div>
-                      <div>{formatTokenAmount(o.amount)}</div>
-                      <div>{shortAddr(o.trader)}</div>
-                    </div>
-                  ))}
+                  {sellOrders.map((o) => {
+                    const isMine = account && o.trader && account.toLowerCase() === o.trader.toLowerCase();
+                    return (
+                      <div key={o.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 0.6fr', alignItems: 'center', padding: '8px 12px', borderTop: '1px solid #f3f4f6' }}>
+                        <div>{formatTokenAmount(o.price)}</div>
+                        <div>{formatTokenAmount(o.amount)}</div>
+                        <div>
+                          {shortAddr(o.trader)} {isMine && <span style={{ marginLeft: 6, fontSize: 12, color: '#059669' }}>(Me)</span>}
+                        </div>
+                        <div>
+                          {isMine && (
+                            <button
+                              onClick={() => handleCancelOrder(o.id)}
+                              disabled={isLoading}
+                              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #dc2626', background: '#fff', color: '#dc2626', cursor: isLoading ? 'not-allowed' : 'pointer' }}
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

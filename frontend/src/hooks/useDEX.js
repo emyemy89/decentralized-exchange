@@ -138,6 +138,22 @@ export const useDEX = () => {
     }
   }, [dexContract]);
 
+  // Cancel an order by id in a given token order book
+  const cancelOrder = useCallback(async (tokenAddress, orderId) => {
+    if (!dexContract) {
+      throw new Error('Wallet not connected');
+    }
+
+    try {
+      const tx = await dexContract.cancelOrder(tokenAddress, orderId);
+      await tx.wait();
+      return tx.hash;
+    } catch (error) {
+      console.error('Error canceling order:', error);
+      throw error;
+    }
+  }, [dexContract]);
+
   // Create a buy order
   const createBuyOrder = useCallback(async (buyToken, sellToken, amount, price) => {
     if (!dexContract) {
@@ -254,6 +270,7 @@ export const useDEX = () => {
     createSellOrder,
     matchOrders,
     getOrderBook,
+    cancelOrder,
     
     // Utility functions
     formatTokenAmount,

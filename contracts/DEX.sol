@@ -72,6 +72,18 @@ contract DEX {
         uint256 price
     );
 
+    /// @notice Emitted when an order is canceled and remaining funds are refunded.
+    /// @param id The unique order ID
+    /// @param trader The owner of the order
+    /// @param refundToken The token refunded to the trader
+    /// @param refundAmount The amount refunded
+    event OrderCanceled(
+        uint256 indexed id,
+        address indexed trader,
+        address indexed refundToken,
+        uint256 refundAmount
+    );
+
     /// ---------------------------------------------------------------------
     /// Function skeletons (implementation to be added in later steps)
     /// ---------------------------------------------------------------------
@@ -241,5 +253,49 @@ contract DEX {
                 }
             }
         }
+    }
+
+    /// @notice Cancel an existing, unfilled (or partially filled) order and refund remaining locked tokens.
+    /// @param token The token key of the order book where the order resides
+    /// @param orderId The unique ID of the order to cancel
+    function cancelOrder(address token, uint256 orderId) external {
+        Order[] storage orders = orderBook[token];
+
+        // Find the order by id (linear scan for simplicity)
+        for (uint256 i = 0; i < orders.length; i++) {
+            if (orders[i].id != orderId) continue;
+
+            require(!orders[i].isFilled, "Order already filled or canceled");
+            require(orders[i].trader == msg.sender, "Not order owner");
+
+            uint256 remainingAmount = orders[i].amount; // remaining unfilled amount
+            require(remainingAmount > 0, "Nothing to cancel");
+
+            // Compute refund based on order side
+            address refundToken;
+            uint256 refundAmount;
+            if (orders[i].isBuyOrder) {
+                // Refund remaining payment tokens proportional to remaining buy amount
+                // price is in sellToken per 1 buyToken (1e18 decimals)
+                refundToken = orders[i].sellToken;
+                refundAmount = (remainingAmount * orders[i].price) / 1e18;
+            } else {
+                // Refund remaining sell tokens
+                refundToken = orders[i].sellToken;
+                refundAmount = remainingAmount;
+            }
+
+            // Mark order as filled/canceled and zero out amount
+            orders[i].amount = 0;
+            orders[i].isFilled = true;
+
+            // Refund remaining locked funds
+            balances[refundToken][msg.sender] += refundAmount;
+
+            emit OrderCanceled(orderId, msg.sender, refundToken, refundAmount);
+            return;
+        }
+
+        revert("Order not found");
     }
 }
