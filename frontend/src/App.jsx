@@ -43,14 +43,12 @@ function App() {
   const [selectedDepositToken, setSelectedDepositToken] = useState('A');
   const [selectedWithdrawToken, setSelectedWithdrawToken] = useState('A');
 
-  // Sample token addresses (you'll need to deploy these and update)
   useEffect(() => {
-    // These are the actual deployed token addresses
+    // the actual deployed token addresses
     setTokenAAddress('0x5FbDB2315678afecb367f032d93F642f64180aa3');
     setTokenBAddress('0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512');
   }, []);
 
-  // Load balances when connected
   useEffect(() => {
     if (isConnected && tokenAAddress && tokenBAddress) {
       loadBalances();
@@ -80,11 +78,9 @@ function App() {
       const allOrders = await getOrderBook(tokenAAddress);
       setOrders(allOrders);
 
-      // Split into buy/sell
       const buys = allOrders.filter(o => o.isBuyOrder && !o.isFilled);
       const sells = allOrders.filter(o => !o.isBuyOrder && !o.isFilled);
 
-      // Sort: buys by price desc, sells by price asc
       buys.sort((a, b) => (BigInt(b.price) > BigInt(a.price) ? 1 : BigInt(b.price) < BigInt(a.price) ? -1 : 0));
       sells.sort((a, b) => (BigInt(a.price) > BigInt(b.price) ? 1 : BigInt(a.price) < BigInt(b.price) ? -1 : 0));
 
@@ -310,11 +306,10 @@ function App() {
     <div style={{ maxWidth: 800, margin: '0 auto', padding: 24 }}>
       <h1 style={{ marginBottom: 24 }}>Decentralized Exchange – MVP Setup</h1>
       
-      {/* Connection Status */}
       <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
         {isConnected ? (
           <div>
-            <p style={{ color: 'green', margin: 0 }}>✅ Connected Wallet: {account}</p>
+            <p style={{ color: 'green', margin: 0 }}> Connected Wallet: {account}</p>
           </div>
         ) : (
           <button 
@@ -396,7 +391,7 @@ function App() {
         <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
           <h3>Actions</h3>
 
-          {/* Deposit (concise) */}
+          {/* Deposit */}
           <div style={{ marginBottom: 16, padding: 12, border: '1px solid #e5e7eb', borderRadius: 8, background: '#ffffff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <h4 style={{ margin: 0 }}>
@@ -442,7 +437,7 @@ function App() {
             </div>
           </div>
 
-          {/* Withdraw (concise) */}
+          {/* Withdraw */}
           <div style={{ marginBottom: 16, padding: 12, border: '1px solid #e5e7eb', borderRadius: 8, background: '#ffffff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <h4 style={{ margin: 0 }}>
