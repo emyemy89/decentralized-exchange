@@ -308,7 +308,7 @@ function App() {
       
       <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
         {isConnected ? (
-          <div>
+      <div>
             <p style={{ color: 'green', margin: 0 }}> Connected Wallet: {account}</p>
           </div>
         ) : (
@@ -585,7 +585,15 @@ function App() {
             <h3 style={{ margin: 0 }}>Order Book (Token A / Token B)</h3>
             <button 
               onClick={loadOrderBook}
-              style={{ padding: '6px 12px', borderRadius: 4, border: '1px solid #111827', background: '#fff', cursor: 'pointer' }}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 4,
+                border: '1px solid #111827',
+                background: '#fff',
+                color: '#111827',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
             >
               Refresh
             </button>
@@ -593,18 +601,18 @@ function App() {
 
           {/* Conversion rates */}
           <div className="conversion">
-            <div className="conversion__items" style={{ color: '#000' }}>
+            <div className="conversion__items">
               <div>
-                <strong style={{ color: '#000' }}>Best Bid</strong>
-                <div style={{ color: '#000' }}>{bestBid ? `${formatTokenAmount(bestBid)} B per 1 A` : '-'}</div>
+                <strong>Best Bid</strong>
+                <div>{bestBid ? `${formatTokenAmount(bestBid)} B per 1 A` : '-'}</div>
               </div>
               <div>
-                <strong style={{ color: '#000' }}>Best Ask</strong>
-                <div style={{ color: '#000' }}>{bestAsk ? `${formatTokenAmount(bestAsk)} B per 1 A` : '-'}</div>
+                <strong>Best Ask</strong>
+                <div>{bestAsk ? `${formatTokenAmount(bestAsk)} B per 1 A` : '-'}</div>
               </div>
               <div>
-                <strong style={{ color: '#000' }}>Mid</strong>
-                <div style={{ color: '#000' }}>
+                <strong>Mid</strong>
+                <div>
                   {bestBid && bestAsk
                     ? `${formatTokenAmount((BigInt(bestBid) + BigInt(bestAsk)) / 2n)} B per 1 A`
                     : '-'}
