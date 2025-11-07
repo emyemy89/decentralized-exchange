@@ -6,25 +6,25 @@ import "./AssetToken.sol";
 
 contract MinimalTest {
     function testMinimalDepositAndBalance() public {
-        // Deploy contracts
+        // deploy
         DEX dex = new DEX();
         AssetToken tokenB = new AssetToken("Token B", "TKB", 1_000_000 ether);
         
-        // Deposit tokens
+        // deposit
         uint256 depositAmount = 5_000 ether;
         tokenB.approve(address(dex), depositAmount);
         dex.deposit(address(tokenB), depositAmount);
         
-        // Check balance directly
+        // check balance directly
         uint256 balance = dex.balances(address(tokenB), address(this));
         require(balance == depositAmount, "Balance mismatch");
         
-        // Try to create a small buy order that should work
+        //create a small buy order that should work
         AssetToken tokenA = new AssetToken("Token A", "TKA", 1_000_000 ether);
         tokenA.approve(address(dex), depositAmount);
         dex.deposit(address(tokenA), depositAmount);
         
-        // This should work: 1 TokenA at 1 TokenB per TokenA (requires 1 TokenB)
+        // this should work: 
         dex.createBuyOrder(address(tokenA), address(tokenB), 1 ether, 1 ether);
     }
 }
