@@ -9,7 +9,6 @@ export const useDEX = () => {
   const [account, setAccount] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Initialize provider and signer
   useEffect(() => {
     if (window.ethereum) {
       const provider = new ethers.BrowserProvider(window.ethereum);
@@ -17,7 +16,6 @@ export const useDEX = () => {
     }
   }, []);
 
-  // Connect to MetaMask and ensure we're on Hardhat (31337)
   const connectWallet = useCallback(async () => {
     try {
       if (!window.ethereum) {
@@ -31,8 +29,6 @@ export const useDEX = () => {
         rpcUrls: ['http://127.0.0.1:8545'],
         blockExplorerUrls: []
       };
-
-      // Try to switch to Hardhat; if not added, add it
       try {
         await window.ethereum.request({
           method: 'wallet_switchEthereumChain',
@@ -54,7 +50,6 @@ export const useDEX = () => {
       });
 
       if (accounts.length > 0) {
-        // "any" avoids network caching issues when chain changes
         const provider = new ethers.BrowserProvider(window.ethereum, 'any');
         const signer = await provider.getSigner();
         const dexContract = new ethers.Contract(DEX_CONTRACT_ADDRESS, DEX_ABI, signer);
@@ -72,7 +67,6 @@ export const useDEX = () => {
     }
   }, []);
 
-  // Get user's balance for a specific token in the DEX
   const getBalance = useCallback(async (tokenAddress) => {
     if (!dexContract || !account) return '0';
     
@@ -85,7 +79,6 @@ export const useDEX = () => {
     }
   }, [dexContract, account]);
 
-  // Get user's token balance from the token contract
   const getTokenBalance = useCallback(async (tokenAddress) => {
     if (!provider || !account) return '0';
     
@@ -99,19 +92,16 @@ export const useDEX = () => {
     }
   }, [provider, account]);
 
-  // Deposit tokens into the DEX
   const deposit = useCallback(async (tokenAddress, amount) => {
     if (!signer || !dexContract) {
       throw new Error('Wallet not connected');
     }
 
     try {
-      // First approve the DEX to spend tokens
       const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
       const approveTx = await tokenContract.approve(DEX_CONTRACT_ADDRESS, amount);
       await approveTx.wait();
 
-      // Then deposit
       const depositTx = await dexContract.deposit(tokenAddress, amount);
       await depositTx.wait();
 
@@ -122,7 +112,6 @@ export const useDEX = () => {
     }
   }, [signer, dexContract]);
 
-  // Withdraw tokens from the DEX
   const withdraw = useCallback(async (tokenAddress, amount) => {
     if (!dexContract) {
       throw new Error('Wallet not connected');
@@ -138,7 +127,6 @@ export const useDEX = () => {
     }
   }, [dexContract]);
 
-  // Cancel an order by id in a given token order book
   const cancelOrder = useCallback(async (tokenAddress, orderId) => {
     if (!dexContract) {
       throw new Error('Wallet not connected');
@@ -154,7 +142,6 @@ export const useDEX = () => {
     }
   }, [dexContract]);
 
-  // Create a buy order
   const createBuyOrder = useCallback(async (buyToken, sellToken, amount, price) => {
     if (!dexContract) {
       throw new Error('Wallet not connected');
@@ -170,7 +157,6 @@ export const useDEX = () => {
     }
   }, [dexContract]);
 
-  // Create a sell order
   const createSellOrder = useCallback(async (sellToken, buyToken, amount, price) => {
     if (!dexContract) {
       throw new Error('Wallet not connected');
@@ -186,7 +172,6 @@ export const useDEX = () => {
     }
   }, [dexContract]);
 
-  // Match orders for a token
   const matchOrders = useCallback(async (tokenAddress) => {
     if (!dexContract) {
       throw new Error('Wallet not connected');
@@ -202,16 +187,13 @@ export const useDEX = () => {
     }
   }, [dexContract]);
 
-  // Get order book for a token
   const getOrderBook = useCallback(async (tokenAddress) => {
     if (!dexContract) return [];
     
     try {
-      // Get the next order ID to know how many orders exist
       const nextOrderId = await dexContract.nextOrderId();
       const orders = [];
       
-      // Fetch all orders (this is a simplified approach)
       for (let i = 0; i < nextOrderId; i++) {
         try {
           const order = await dexContract.orderBook(tokenAddress, i);
@@ -226,7 +208,6 @@ export const useDEX = () => {
             isFilled: order.isFilled
           });
         } catch (error) {
-          // Order doesn't exist at this index, continue
           break;
         }
       }
@@ -238,31 +219,27 @@ export const useDEX = () => {
     }
   }, [dexContract]);
 
-  // Format token amount for display
   const formatTokenAmount = useCallback((amount, decimals = 18) => {
     return ethers.formatUnits(amount, decimals);
   }, []);
 
-  // Parse token amount for contract calls
   const parseTokenAmount = useCallback((amount, decimals = 18) => {
     return ethers.parseUnits(amount, decimals);
   }, []);
 
   return {
-    // Connection state
+    // connection state
     isConnected,
     account,
     provider,
     signer,
     dexContract,
     
-    // Connection functions
+    // connection functions
     connectWallet,
-    
-    // Balance functions
+    // balance functions
     getBalance,
     getTokenBalance,
-    
     // DEX functions
     deposit,
     withdraw,
@@ -271,8 +248,7 @@ export const useDEX = () => {
     matchOrders,
     getOrderBook,
     cancelOrder,
-    
-    // Utility functions
+    // util functions
     formatTokenAmount,
     parseTokenAmount
   };

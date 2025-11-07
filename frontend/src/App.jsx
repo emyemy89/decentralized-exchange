@@ -304,7 +304,7 @@ function App() {
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: 24 }}>
-      <h1 style={{ marginBottom: 24 }}>Decentralized Exchange – MVP Setup</h1>
+      <h1 style={{ marginBottom: 24 }}>BridgePoint DEX</h1>
       
       <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
         {isConnected ? (
