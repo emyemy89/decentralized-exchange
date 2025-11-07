@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Gradient for neon glow -->
   <defs>
     <linearGradient id="neon" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#00ffcc"/>
@@ -8,21 +7,17 @@
     </linearGradient>
   </defs>
 
-  <!-- Bridge structure (minimal line art) -->
   <path d="M18 44 L18 36 Q18 32, 20 30 L22 28 L26 28 L26 36 L26 44 M38 44 L38 36 L38 28 L42 28 L44 30 Q46 32, 46 36 L46 44 M20 30 L32 20 L44 30 M26 36 L38 36" 
         stroke="url(#neon)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <!-- Crypto flow dots (left) -->
   <circle cx="12" cy="26" r="1.5" fill="#00ffcc" opacity="0.8"/>
   <circle cx="8" cy="32" r="1" fill="#00ffcc" opacity="0.6"/>
   <path d="M14 22 Q16 20, 18 22" stroke="#00ffcc" stroke-width="1.5" fill="none" opacity="0.7"/>
 
-  <!-- Crypto flow dots (right) -->
   <circle cx="52" cy="26" r="1.5" fill="#0066ff" opacity="0.8"/>
   <circle cx="56" cy="32" r="1" fill="#0066ff" opacity="0.6"/>
   <path d="M50 22 Q48 20, 46 22" stroke="#0066ff" stroke-width="1.5" fill="none" opacity="0.7"/>
 
-  <!-- Center connection point -->
   <circle cx="32" cy="20" r="2" fill="#ffffff"/>
   <circle cx="32" cy="20" r="1.2" fill="url(#neon)"/>
 </svg>
