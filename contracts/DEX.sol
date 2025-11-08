@@ -50,12 +50,10 @@ contract DEX is ReentrancyGuard {
         uint256 refundAmount
     );
 
-
     // This updates the internal balance after a successful transfer.
     function deposit(address token, uint256 amount) external nonReentrant {
         require(amount > 0, "Amount must be > 0");
         IERC20(token).transferFrom(msg.sender, address(this), amount);
-        // Solidity 0.8+ automatically reverts on overflow
         balances[token][msg.sender] += amount;
         emit Deposit(msg.sender, token, amount);
     }
@@ -64,7 +62,6 @@ contract DEX is ReentrancyGuard {
         require(amount > 0, "Amount must be > 0");
         require(balances[token][msg.sender] >= amount, "Insufficient balance");
         // Update state before external call (Checks-Effects-Interactions pattern)
-        // SafeMath: Underflow protection (Solidity 0.8+ has built-in, but explicit for clarity)
         balances[token][msg.sender] -= amount;
         IERC20(token).transfer(msg.sender, amount);
         emit Withdraw(msg.sender, token, amount);
@@ -76,15 +73,12 @@ contract DEX is ReentrancyGuard {
         require(price > 0, "Price must be > 0");
         
         //price is in sellToken per buyToken (in wei), so we divide by 1e18
-        // Solidity 0.8+ automatically reverts on overflow, so no explicit check needed
         uint256 requiredSellAmount = (amount * price) / 1e18;
         
         require(balances[sellToken][msg.sender] >= requiredSellAmount, "Insufficient sell token balance");
         
-        // Solidity 0.8+ automatically reverts on underflow
         balances[sellToken][msg.sender] -= requiredSellAmount;
         
-        // Increment orderId (Solidity 0.8+ handles overflow)
         uint256 orderId = nextOrderId++;  // new buy order
         Order memory newOrder = Order({
             id: orderId,
@@ -109,11 +103,9 @@ contract DEX is ReentrancyGuard {
         
         require(balances[sellToken][msg.sender] >= amount, "Insufficient sell token balance");
         
-        // Solidity 0.8+ automatically reverts on underflow
         balances[sellToken][msg.sender] -= amount;
         
         //create new sell order
-        // Solidity 0.8+ handles overflow automatically
         uint256 orderId = nextOrderId++;
         Order memory newOrder = Order({
             id: orderId,
@@ -155,17 +147,13 @@ contract DEX is ReentrancyGuard {
                         ? orders[i].amount 
                         : orders[j].amount;
                     
-                    // Solidity 0.8+ automatically reverts on overflow
                     uint256 paymentAmount = (tradeAmount * orders[j].price) / 1e18;
                     
-                    // Solidity 0.8+ automatically reverts on overflow
                     balances[orders[i].buyToken][orders[i].trader] += tradeAmount;
                     
-                    // Solidity 0.8+ automatically reverts on overflow
                     balances[orders[i].sellToken][orders[j].trader] += paymentAmount;
                     
                     // Reduce order amounts
-                    // Solidity 0.8+ automatically reverts on underflow
                     orders[i].amount -= tradeAmount;
                     orders[j].amount -= tradeAmount;
                     
@@ -207,7 +195,6 @@ contract DEX is ReentrancyGuard {
             if (orders[i].isBuyOrder) {
                 // price is in sellToken per 1 buyToken (1e18 decimals)
                 refundToken = orders[i].sellToken;
-                // Solidity 0.8+ automatically reverts on overflow
                 refundAmount = (remainingAmount * orders[i].price) / 1e18;
             } else {
                 // Refund remaining sell tokens
@@ -218,7 +205,6 @@ contract DEX is ReentrancyGuard {
             orders[i].amount = 0;
             orders[i].isFilled = true;
 
-            // Solidity 0.8+ automatically reverts on overflow
             balances[refundToken][msg.sender] += refundAmount;
 
             emit OrderCanceled(orderId, msg.sender, refundToken, refundAmount);
