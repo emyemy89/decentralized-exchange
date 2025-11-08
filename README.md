@@ -1,8 +1,16 @@
-# Decentralized Exchange (DEX) - Frontend Integration
+# BridgePoint DEX Project 
 
-This project integrates a React frontend with Hardhat smart contracts for a decentralized exchange.
+## Introduction
 
-## Project Structure
+This is a **Decentralized Exchange (DEX)** capable of doing the following:
+- Users can deposit tokens (like Token A and Token B)
+- Users can create buy/sell orders (e.g., "I want to buy 10 Token A for 2 Token B each")
+- The system matches compatible orders and executes trades automatically
+- Everything is stored on the blockchain (transparent and secure)
+
+---
+
+## Project Structure 
 
 ```
 decentralized-exchange/
@@ -22,112 +30,158 @@ decentralized-exchange/
 └── hardhat.config.cjs   # Hardhat configuration
 ```
 
-## Setup Instructions
+### **Backend (Smart Contracts)** - `/contracts`
 
-### 1. Install Dependencies
+**1. `AssetToken.sol`** - Your Cryptocurrency Token
+- This creates a basic token (like Ethereum's ERC-20 standard)
+- You can mint tokens, transfer them, etc.
+- Think of it as "coins" people can trade
+
+**2. `DEX.sol`** - The Exchange Logic
+- This is the **brain** of your exchange
+- Handles deposits, withdrawals, order creation, and order matching
+- Stores all orders in an "order book" (like a stock exchange board)
+
+**Key Functions:**
+- `deposit()` - Put tokens into the exchange
+- `withdraw()` - Take tokens out
+- `createBuyOrder()` - "I want to buy X tokens"
+- `createSellOrder()` - "I want to sell X tokens"
+- `matchOrders()` - Automatically matches buy/sell orders
+
+### **Frontend in React** - `/frontend`
+
+**What it does:**
+- Beautiful web interface to interact with your smart contracts
+- Users can connect their MetaMask wallet
+- View balances, create orders, see the order book
+- Everything happens through a web browser
+
+**Key Files:**
+- `App.jsx` - Main UI component
+- `hooks/useDEX.js` - Connects frontend to blockchain
+- `utils/contractConfig.js` - Contract addresses and ABIs (the "interface")
+
+### **Deployment** - `/scripts`
+
+**`deploy.js`** - Deploys your contracts to the blockchain
+- Creates Token A and Token B
+- Deploys the DEX contract
+- Gives you addresses to use in the frontend
+
+### **Configuration** - Root Directory
+
+**`hardhat.config.cjs`** - Configures Hardhat (development tool)
+- Sets Solidity version
+- Configures networks (local testnet, Sepolia testnet, etc.)
+- Most important config file!
+
+---
+
+## How it all works together
+
+```
+User Opens Browser
+       ↓
+Connects MetaMask Wallet
+       ↓
+Frontend (React) loads contract addresses
+       ↓
+User clicks "Deposit" or "Create Order"
+       ↓
+Frontend calls smart contract function via ethers.js
+       ↓
+Smart contract executes on blockchain
+       ↓
+Transaction confirmed → Frontend updates UI
+```
+
+**Example Flow:**
+1. User wants to buy 10 Token A for 2 Token B each
+2. User fills form in frontend → clicks "Create Buy Order"
+3. Frontend sends transaction to `DEX.sol` → `createBuyOrder()`
+4. Smart contract checks: Does user have enough Token B? (they need 20 Token B)
+5. If yes: Creates order, deducts 20 Token B from user's balance
+6. Order appears in order book
+7. Another user can create a matching sell order
+8. `matchOrders()` function executes the trade automatically
+
+---
+
+
+## How to test (Simple Steps)
+
+### **Step 1: Make Sure Everything Is Installed**
 
 ```bash
-# Install backend dependencies
+#  in root
 npm install
 
-# Install frontend dependencies
+# cd to the frontend folder
 cd frontend
 npm install
 cd ..
 ```
 
-### 2. Deploy Contracts to Local Network
 
+### **Step 2: Start Local Blockchain**
+
+Open Terminal 1:
 ```bash
-# Start local Hardhat network
+# in root
 npx hardhat node
+```
 
-# In another terminal, deploy contracts
+This creates the local Ethereum network
+
+### **Step 3: Deploy Contracts**
+
+Open Terminal 2 (new terminal window):
+```bash
+# in root
 npx hardhat run scripts/deploy.js --network localhost
 ```
 
-### 3. Update Frontend Configuration
+**Copy the contract addresses** it gives you (Token A, Token B, DEX address)
 
-After deployment, update the contract addresses in the frontend:
+### **Step 4: Update Frontend Config**
 
-1. Copy the DEX contract address from the deployment output
-2. Update `frontend/src/utils/contractConfig.js`:
-   ```javascript
-   export const DEX_CONTRACT_ADDRESS = "YOUR_DEX_ADDRESS_HERE";
-   ```
+Update `frontend/src/utils/contractConfig.js`:
+- Replace `DEX_CONTRACT_ADDRESS` with the address from Step 4
 
-3. Update `frontend/src/App.jsx` with the token addresses:
-   ```javascript
-   setTokenAAddress('YOUR_TOKEN_A_ADDRESS');
-   setTokenBAddress('YOUR_TOKEN_B_ADDRESS');
-   ```
+Update `frontend/src/App.jsx`:
+- Replace the token addresses in the `useEffect` with addresses from Step 4
 
-### 4. Start the Frontend
+### **Step 5: Configure MetaMask**
 
+1. Open MetaMask browser extension
+2. Click network dropdown → "Add Network" → "Add a network manually"
+3. Fill in:
+   - **Network Name:** Hardhat Local
+   - **RPC URL:** http://127.0.0.1:8545
+   - **Chain ID:** 31337
+   - **Currency Symbol:** ETH
+4. Click "Save"
+
+5. Import a test account:
+   - Click account icon → "Import Account"
+   - Use private key: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
+   - This account has 10,000 ETH for testing
+
+### **Step 6: Start Frontend**
+
+Open Terminal 3:
 ```bash
 cd frontend
 npm run dev
 ```
 
-### 5. Connect MetaMask
+### **Step 8: Test**
 
-1. Open MetaMask
-2. Add the local Hardhat network:
-   - Network Name: `Hardhat Local`
-   - RPC URL: `http://localhost:8545`
-   - Chain ID: `31337`
-   - Currency Symbol: `ETH`
+1. Open browser to localhost
+2. Click "Connect Wallet" in MetaMask
+3. You should see your balances
+4. Try depositing some tokens
+5. Create a buy or sell order
 
-3. Import the Hardhat test account:
-   - Private Key: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
-   - This account has 10,000 ETH for testing
-
-## Features
-
-### Frontend Features
-- ✅ MetaMask wallet connection
-- ✅ Display wallet and DEX balances
-- ✅ Deposit tokens into DEX
-- ✅ Create buy orders
-- ✅ Real-time balance updates
-- ✅ Transaction status messages
-
-### Smart Contract Features
-- ✅ ERC-20 token contracts (AssetToken)
-- ✅ DEX contract with order book
-- ✅ Deposit/withdraw functionality
-- ✅ Buy/sell order creation
-- ✅ Order matching and execution
-- ✅ Event emission for tracking
-
-## Usage
-
-1. **Connect Wallet**: Click "Connect Wallet" to connect MetaMask
-2. **Configure Tokens**: Set the token addresses (pre-filled after deployment)
-3. **View Balances**: See your wallet and DEX balances for both tokens
-4. **Deposit Tokens**: Deposit Token A into the DEX for trading
-5. **Create Orders**: Create buy orders for Token A using Token B as payment
-
-## Testing
-
-Run the Solidity tests:
-```bash
-npx hardhat test --config hardhat.config.cjs
-```
-
-## Development Notes
-
-- The frontend connects to `localhost:8545` (Hardhat local network)
-- All amounts are handled in wei (1 ETH = 10^18 wei)
-- The DEX uses a simple order book model
-- Orders are matched when `buy.price >= sell.price`
-- The frontend automatically refreshes balances after transactions
-
-## Next Steps
-
-- Add sell order creation
-- Implement order book display
-- Add order matching functionality
-- Improve UI/UX design
-- Add more comprehensive error handling
-- Implement order cancellation
+---

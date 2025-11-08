@@ -1,5 +1,5 @@
 // Contract configuration for DEX integration
-export const DEX_CONTRACT_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"; // Deployed DEX contract address
+export const DEX_CONTRACT_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"; // deployed dex contract address
 
 export const DEX_ABI = [
   {
