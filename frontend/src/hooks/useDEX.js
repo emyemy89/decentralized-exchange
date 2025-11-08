@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
-import { DEX_CONTRACT_ADDRESS, DEX_ABI, ERC20_ABI } from '../utils/contractConfig';
+import { DEX_CONTRACT_ADDRESS, DEX_ABI, ERC20_ABI, ASSET_TOKEN_ABI, ASSET_TOKEN_BYTECODE } from '../utils/contractConfig';
 
 export const useDEX = () => {
   const [provider, setProvider] = useState(null);
@@ -227,6 +227,73 @@ export const useDEX = () => {
     return ethers.parseUnits(amount, decimals);
   }, []);
 
+  // Token issuance function
+  const issueToken = useCallback(async (name, symbol, initialSupply) => {
+    if (!signer) {
+      throw new Error('Wallet not connected');
+    }
+
+    try {
+      const factory = new ethers.ContractFactory(ASSET_TOKEN_ABI, ASSET_TOKEN_BYTECODE, signer);
+      const parsedSupply = parseTokenAmount(initialSupply);
+      const tokenContract = await factory.deploy(name, symbol, parsedSupply);
+      await tokenContract.waitForDeployment();
+      const tokenAddress = await tokenContract.getAddress();
+      return tokenAddress;
+    } catch (error) {
+      console.error('Error issuing token:', error);
+      throw error;
+    }
+  }, [signer, parseTokenAmount]);
+
+  // Get token info (name, symbol)
+  const getTokenInfo = useCallback(async (tokenAddress) => {
+    if (!provider) return null;
+    
+    try {
+      const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+      const [name, symbol] = await Promise.all([
+        tokenContract.name(),
+        tokenContract.symbol()
+      ]);
+      return { name, symbol, address: tokenAddress };
+    } catch (error) {
+      console.error('Error getting token info:', error);
+      return null;
+    }
+  }, [provider]);
+
+  // Fund address with tokens (transfer from issuer)
+  const fundToken = useCallback(async (tokenAddress, recipientAddress, amount) => {
+    if (!signer) {
+      throw new Error('Wallet not connected');
+    }
+
+    try {
+      const tokenContract = new ethers.Contract(tokenAddress, ASSET_TOKEN_ABI, signer);
+      
+      // Check if caller is owner
+      const owner = await tokenContract.owner();
+      const caller = await signer.getAddress();
+      if (owner.toLowerCase() !== caller.toLowerCase()) {
+        // If not owner, try transfer instead of mint
+        const parsedAmount = parseTokenAmount(amount);
+        const tx = await tokenContract.transfer(recipientAddress, parsedAmount);
+        await tx.wait();
+        return tx.hash;
+      } else {
+        // If owner, can mint directly
+        const parsedAmount = parseTokenAmount(amount);
+        const tx = await tokenContract.mint(recipientAddress, parsedAmount);
+        await tx.wait();
+        return tx.hash;
+      }
+    } catch (error) {
+      console.error('Error funding token:', error);
+      throw error;
+    }
+  }, [signer, parseTokenAmount]);
+
   return {
     // connection state
     isConnected,
@@ -248,6 +315,10 @@ export const useDEX = () => {
     matchOrders,
     getOrderBook,
     cancelOrder,
+    // token issuance functions
+    issueToken,
+    getTokenInfo,
+    fundToken,
     // util functions
     formatTokenAmount,
     parseTokenAmount
