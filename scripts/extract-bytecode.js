@@ -11,7 +11,6 @@ const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8'));
 const configPath = path.join(__dirname, '../frontend/src/utils/contractConfig.js');
 let configContent = fs.readFileSync(configPath, 'utf8');
 
-// Replace or add ASSET_TOKEN_BYTECODE
 const bytecodeRegex = /export const ASSET_TOKEN_BYTECODE = ["'].*?["'];?/;
 const newBytecodeLine = `export const ASSET_TOKEN_BYTECODE = "${artifact.bytecode}";`;
 
