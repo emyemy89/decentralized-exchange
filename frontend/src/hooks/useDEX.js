@@ -227,7 +227,7 @@ export const useDEX = () => {
     return ethers.parseUnits(amount, decimals);
   }, []);
 
-  // Token issuance function
+  //token issuance function
   const issueToken = useCallback(async (name, symbol, initialSupply) => {
     if (!signer) {
       throw new Error('Wallet not connected');
@@ -246,7 +246,7 @@ export const useDEX = () => {
     }
   }, [signer, parseTokenAmount]);
 
-  // Get token info (name, symbol)
+  // to get  token info (name, symbol)
   const getTokenInfo = useCallback(async (tokenAddress) => {
     if (!provider) return null;
     
@@ -263,7 +263,7 @@ export const useDEX = () => {
     }
   }, [provider]);
 
-  // Fund address with tokens (transfer from issuer)
+  // to fund address with tokens (transfer from issuer)
   const fundToken = useCallback(async (tokenAddress, recipientAddress, amount) => {
     if (!signer) {
       throw new Error('Wallet not connected');
@@ -272,17 +272,17 @@ export const useDEX = () => {
     try {
       const tokenContract = new ethers.Contract(tokenAddress, ASSET_TOKEN_ABI, signer);
       
-      // Check if caller is owner
+      // check if caller == owner
       const owner = await tokenContract.owner();
       const caller = await signer.getAddress();
       if (owner.toLowerCase() !== caller.toLowerCase()) {
-        // If not owner, try transfer instead of mint
+        // if not owner --> try transfer instead of mint
         const parsedAmount = parseTokenAmount(amount);
         const tx = await tokenContract.transfer(recipientAddress, parsedAmount);
         await tx.wait();
         return tx.hash;
       } else {
-        // If owner, can mint directly
+        // if owner --> can mint directly
         const parsedAmount = parseTokenAmount(amount);
         const tx = await tokenContract.mint(recipientAddress, parsedAmount);
         await tx.wait();

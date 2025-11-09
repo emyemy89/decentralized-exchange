@@ -45,10 +45,6 @@ contract AssetTokenTest {
         require(token.balanceOf(address(this)) == initialSupply - amount, "deployer balance incorrect");
 
         ok = AssetToken(token).transferFrom(user1, user2, 0);
-        // The above would fail without approval; instead transfer from user1 by calling from this contract isn't possible.
-        // So perform a transfer from this contract to user2 using user1's balance by first pulling back tokens.
-        // Simpler: transfer from deployer directly to user2.
-        // Validate second leg using deployer -> user2 transfer.
 
         uint256 amount2 = amount;
         ok = token.transfer(user2, amount2);

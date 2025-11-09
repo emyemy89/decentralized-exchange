@@ -21,21 +21,21 @@ function App() {
     getTokenInfo
   } = useDEX();
 
-  // Token registry-list of all tokens
+  // token registry list of all tokens
   const [tokens, setTokens] = useState([]);
   const [tokenBalances, setTokenBalances] = useState({}); // { address: { wallet: '0', dex: '0' } }
   
-  //  Selected tokens for trading
+  // the selected tokens for trading
   const [selectedBuyToken, setSelectedBuyToken] = useState(null);
   const [selectedSellToken, setSelectedSellToken] = useState(null);
   const [selectedOrderBookToken, setSelectedOrderBookToken] = useState(null);
   
-  // Token issuance
+  // token issuance
   const [newTokenName, setNewTokenName] = useState('');
   const [newTokenSymbol, setNewTokenSymbol] = useState('');
   const [newTokenSupply, setNewTokenSupply] = useState('1000000');
   
-  // Deposit and withdraw
+  // deposit and withdraw
   const [selectedDepositToken, setSelectedDepositToken] = useState(null);
   const [depositAmount, setDepositAmount] = useState('100');
   const [selectedWithdrawToken, setSelectedWithdrawToken] = useState(null);
@@ -397,7 +397,7 @@ function App() {
         </div>
       </div>
 
-      {/* Balances & Actions */}
+      {/* Balances n Actions */}
       {isConnected && (
         <div style={{ marginBottom: 24, padding: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
           <h3>Deposit & Withdraw</h3>

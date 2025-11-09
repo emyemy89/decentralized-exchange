@@ -18,7 +18,7 @@ const newBytecodeLine = `export const ASSET_TOKEN_BYTECODE = "${artifact.bytecod
 if (bytecodeRegex.test(configContent)) {
   configContent = configContent.replace(bytecodeRegex, newBytecodeLine);
 } else {
-  // Add before the last line or at the end
+  //add before the last line or at the end
   configContent = configContent.trim() + '\n\n' + newBytecodeLine + '\n';
 }
 
