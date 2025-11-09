@@ -46,27 +46,31 @@ async function main() {
   await tokenB.transfer(await signer.getAddress(), ethers.parseEther("10000"));
 
 
-    // fund account 13 with token A and approve dex
-  const acct13 = await provider.getSigner(2);
-  await tokenA.transfer(await acct13.getAddress(), ethers.parseEther("1000")); // or: await tokenA.mint(...)
+    // fund account 13 with token A and B and approve dex
+  const acct2 = await provider.getSigner(2);
+  await tokenA.transfer(await acct2.getAddress(), ethers.parseEther("1000")); // or: await tokenA.mint(...)
 
-  await tokenA.connect(acct13).approve(dexAddress, ethers.parseEther("500"));
+  await tokenA.connect(acct2).approve(dexAddress, ethers.parseEther("500"));
 
   // sanity deposit, I think we should remove this line
-  await dex.connect(acct13).deposit(tokenAAddress, ethers.parseEther("10"));
+  await dex.connect(acct2).deposit(tokenAAddress, ethers.parseEther("10"));
+  await tokenB.transfer(await acct2.getAddress(), ethers.parseEther("1000"));
+  await tokenB.connect(acct2).approve(dexAddress, ethers.parseEther("500"));
+  await dex.connect(acct2).deposit(tokenBAddress, ethers.parseEther("200"));
 
-  // option A: transfer from deployer;deployer owns initialSupply
-  await tokenB.transfer(await acct13.getAddress(), ethers.parseEther("1000"));
+  const acct1 = await provider.getSigner(1);
+  await tokenA.transfer(await acct1.getAddress(), ethers.parseEther("1000")); // or: await tokenA.mint(...)
 
-  // B: mint directly; deployer is owner in AssetToken
-  // await tokenB.mint(await acct13.getAddress(), ethers.parseEther("1000"));
-
-  await tokenB.connect(acct13).approve(dexAddress, ethers.parseEther("500"));
-
-  //deposit some Token B into the DEX for buy orders
-  await dex.connect(acct13).deposit(tokenBAddress, ethers.parseEther("200"));
+  await tokenA.connect(acct1).approve(dexAddress, ethers.parseEther("500"));
 
 
+  await dex.connect(acct1).deposit(tokenAAddress, ethers.parseEther("10"));
+  await tokenB.transfer(await acct1.getAddress(), ethers.parseEther("1000"));
+  await tokenB.connect(acct1).approve(dexAddress, ethers.parseEther("500"));
+  await dex.connect(acct1).deposit(tokenBAddress, ethers.parseEther("200"));
+
+
+  
   console.log("\n=== Deployment Summary ===");
   console.log("Token A (TKA):", tokenAAddress);
   console.log("Token B (TKB):", tokenBAddress);

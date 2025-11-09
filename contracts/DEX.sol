@@ -2,8 +2,9 @@
 pragma solidity ^0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract DEX {
+contract DEX is ReentrancyGuard {
     struct Order {
         uint256 id;
         address trader;
@@ -49,24 +50,24 @@ contract DEX {
         uint256 refundAmount
     );
 
-
     // This updates the internal balance after a successful transfer.
-    function deposit(address token, uint256 amount) external {
+    function deposit(address token, uint256 amount) external nonReentrant {
         require(amount > 0, "Amount must be > 0");
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         balances[token][msg.sender] += amount;
         emit Deposit(msg.sender, token, amount);
     }
 
-    function withdraw(address token, uint256 amount) external {
+    function withdraw(address token, uint256 amount) external nonReentrant {
         require(amount > 0, "Amount must be > 0");
         require(balances[token][msg.sender] >= amount, "Insufficient balance");
+        // Update state before external call (Checks-Effects-Interactions pattern)
         balances[token][msg.sender] -= amount;
         IERC20(token).transfer(msg.sender, amount);
         emit Withdraw(msg.sender, token, amount);
     }
 
-    function createBuyOrder(address buyToken, address sellToken, uint256 amount, uint256 price) external {
+    function createBuyOrder(address buyToken, address sellToken, uint256 amount, uint256 price) external nonReentrant {
         // validate inputs
         require(amount > 0, "Amount must be > 0");
         require(price > 0, "Price must be > 0");
@@ -96,7 +97,7 @@ contract DEX {
         matchOrders(buyToken);
     }
 
-    function createSellOrder(address sellToken, address buyToken, uint256 amount, uint256 price) external {
+    function createSellOrder(address sellToken, address buyToken, uint256 amount, uint256 price) external nonReentrant {
         require(amount > 0, "Amount must be > 0");
         require(price > 0, "Price must be > 0");
         
@@ -176,7 +177,7 @@ contract DEX {
         }
     }
 
-    function cancelOrder(address token, uint256 orderId) external {
+    function cancelOrder(address token, uint256 orderId) external nonReentrant {
         Order[] storage orders = orderBook[token];
 
         // linear search of the order by id 

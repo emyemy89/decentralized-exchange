@@ -3,8 +3,9 @@ pragma solidity ^0.8.20;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract AssetToken is ERC20, Ownable {
+contract AssetToken is ERC20, Ownable, ReentrancyGuard {
     constructor(
         string memory name_,
         string memory symbol_,
@@ -13,7 +14,7 @@ contract AssetToken is ERC20, Ownable {
         _mint(msg.sender, initialSupply_);
     }
 
-    function mint(address to, uint256 amount) external onlyOwner {
+    function mint(address to, uint256 amount) external onlyOwner nonReentrant {
         _mint(to, amount);
     }
 }
