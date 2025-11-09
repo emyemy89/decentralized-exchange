@@ -63,7 +63,7 @@ async function main() {
 
   await tokenA.connect(acct1).approve(dexAddress, ethers.parseEther("500"));
 
-  // sanity deposit, I think we should remove this line
+
   await dex.connect(acct1).deposit(tokenAAddress, ethers.parseEther("10"));
   await tokenB.transfer(await acct1.getAddress(), ethers.parseEther("1000"));
   await tokenB.connect(acct1).approve(dexAddress, ethers.parseEther("500"));

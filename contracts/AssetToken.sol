@@ -15,7 +15,6 @@ contract AssetToken is ERC20, Ownable, ReentrancyGuard {
     }
 
     function mint(address to, uint256 amount) external onlyOwner nonReentrant {
-        // Solidity 0.8+ and ERC20's _mint already have overflow protection
         _mint(to, amount);
     }
 }

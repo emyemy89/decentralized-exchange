@@ -21,11 +21,11 @@ function App() {
     getTokenInfo
   } = useDEX();
 
-  // Token registry - list of all tokens
+  // Token registry-list of all tokens
   const [tokens, setTokens] = useState([]);
   const [tokenBalances, setTokenBalances] = useState({}); // { address: { wallet: '0', dex: '0' } }
   
-  // Selected tokens for trading
+  //  Selected tokens for trading
   const [selectedBuyToken, setSelectedBuyToken] = useState(null);
   const [selectedSellToken, setSelectedSellToken] = useState(null);
   const [selectedOrderBookToken, setSelectedOrderBookToken] = useState(null);
@@ -35,7 +35,7 @@ function App() {
   const [newTokenSymbol, setNewTokenSymbol] = useState('');
   const [newTokenSupply, setNewTokenSupply] = useState('1000000');
   
-  // Deposit/Withdraw
+  // Deposit and withdraw
   const [selectedDepositToken, setSelectedDepositToken] = useState(null);
   const [depositAmount, setDepositAmount] = useState('100');
   const [selectedWithdrawToken, setSelectedWithdrawToken] = useState(null);
@@ -55,7 +55,6 @@ function App() {
   const [bestBid, setBestBid] = useState(null);
   const [bestAsk, setBestAsk] = useState(null);
 
-  // Initialize with Token A and Token B from deploy script
   useEffect(() => {
     const initialTokens = [
       { address: '0x5FbDB2315678afecb367f032d93F642f64180aa3', name: 'Token A', symbol: 'TKA' },
