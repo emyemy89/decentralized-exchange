@@ -164,9 +164,11 @@ Update `frontend/src/App.jsx`:
 4. Click "Save"
 
 5. Import a test account:
-   - Click account icon → "Import Account"
-   - Use private key: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
-   - This account has 10,000 ETH for testing
+   - Click your account icon → “Import Account”
+   - Import Address 1 or Address 2 from your `npx hardhat node` output
+   - These are the two funded accounts used by the deploy script for Token A and Token B
+   - You may import one or both of them into MetaMask to test deposits, orders, and trades
+
 
 ### **Step 6: Start Frontend**
 
