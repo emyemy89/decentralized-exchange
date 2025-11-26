@@ -1,4 +1,7 @@
-# BridgePoint DEX Project 
+# BridgePoint DEX 
+
+<img width="772" height="710" alt="Screenshot 2025-11-26 at 11 04 33" src="https://github.com/user-attachments/assets/cc6df578-4ab3-46d8-beb2-77d2c08ab84d" />
+
 
 ## Introduction
 
